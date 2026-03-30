@@ -2,6 +2,8 @@
 
 **PrivateSwap** is a demonstration decentralized exchange on **Ethereum Sepolia** that uses **Fhenix CoFHE** (fully homomorphic encryption) so swap logic can run on **encrypted values** in the smart contract. The UI walks you through **encrypt → submit → decrypt**, aligned with a privacy-forward, MEV-aware story.
 
+
+demo
 https://private-swap-ochre.vercel.app
 
 
