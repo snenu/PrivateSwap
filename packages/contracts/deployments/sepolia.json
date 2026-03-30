@@ -1,0 +1,10 @@
+{
+  "network": "eth-sepolia",
+  "chainId": 11155111,
+  "deployer": "0x573f08604704227A8b9A6551009Bd39C668Ff8F8",
+  "token0": "0xccd90F4A166f26568AAB390E299845928F9E702a",
+  "token1": "0xA8fba68aD76aa5f2215B5f41d77723605c6f2f92",
+  "pool": "0x05e3E59d1f02F3C24Dd889b90cf01c20e63E338C",
+  "decimals": 6,
+  "initializedLiquidity": "1000000"
+}

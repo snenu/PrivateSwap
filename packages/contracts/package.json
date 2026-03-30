@@ -1,0 +1,38 @@
+{
+  "name": "@privateswap/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "cross-env REPORT_GAS=true hardhat test",
+    "clean": "rimraf ./artifacts ./cache ./types ./coverage ./coverage.json",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network eth-sepolia",
+    "mint:demo": "hardhat run scripts/mint-demo.ts --network eth-sepolia"
+  },
+  "devDependencies": {
+    "@fhenixprotocol/cofhe-contracts": "^0.0.13",
+    "@fhenixprotocol/cofhe-mock-contracts": "^0.3.1",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@openzeppelin/contracts": "^5.0.0",
+    "@typechain/ethers-v6": "^0.5.0",
+    "@typechain/hardhat": "^9.0.0",
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.0",
+    "@cofhe/sdk": "^0.4.0",
+    "chai": "^4.4.1",
+    "cofhejs": "^0.3.1",
+    "cofhe-hardhat-plugin": "^0.3.1",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.11.0",
+    "hardhat": "2.22.19",
+    "rimraf": "^5.0.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.2"
+  }
+}
