@@ -35,7 +35,7 @@ Make sure the hosted environment variables match the current addresses below bef
 - **Standard ERC20** settlement on Sepolia means **transfer amounts** can still be visible in the usual ways. This **hybrid** keeps the stack **working end-to-end** on public testnet without FHERC20 in v1.
 - Do **not** treat this as full transactional hiding of size on Ethereum today; treat it as a **real FHE integration** plus transparent ERC20 plumbing.
 - The pool intentionally derives encrypted swap inputs from the settled public `amountIn` instead of accepting a separate `InEuint64`; that removes a public/encrypted mismatch attack path.
-- This repo is production-grade for supported live testnets, not a mainnet asset deployment.
+- This repo is production-grade for supported live testnets.
 
 ## Live deployment (Sepolia)
 
@@ -73,7 +73,7 @@ npm run build -w apps/web
 
 1. Create `packages/contracts/.env` (see `.env.example`):
 
-   - `PRIVATE_KEY` — **test wallet only**; never reuse a mainnet key.
+   - `PRIVATE_KEY` — **test wallet only**; never reuse a personal or funded wallet key.
    - `SEPOLIA_RPC_URL` — HTTPS RPC URL for Sepolia.
 
 2. Deploy:
@@ -176,10 +176,9 @@ Delivered:
 
 - Move from public ERC20 settlement to confidential token settlement when production-ready FHERC20 or equivalent primitives are available.
 - Add deeper privacy mechanisms such as batched private orders, private routing, or delayed reveals.
-- Add external contract audit coverage before any mainnet-value deployment.
+- Add external contract audit coverage before any higher-value testnet or production demo.
 - Add production monitoring, alerting, analytics, and indexed historical swap views.
 - Add multi-pool routing and richer liquidity-management workflows.
-- Reassess mainnet deployment when Fhenix CoFHE mainnet support is available and documented.
 
 ## Troubleshooting
 
@@ -221,7 +220,7 @@ That stack trace comes from the **wallet extension’s** `inpage.js` (e.g. MetaM
 ## Security reminders
 
 - **Rotate any private key** that has been pasted into chat, tickets, or shared screens.
-- Use a **dedicated throwaway wallet** for testnet and **never** fund it from mainnet identities you care about.
+- Use a **dedicated throwaway wallet** for testnet and **never** fund it from wallets you care about.
 
 ## License
 
