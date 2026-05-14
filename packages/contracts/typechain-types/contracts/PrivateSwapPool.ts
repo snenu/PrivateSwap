@@ -23,29 +23,18 @@ import type {
   TypedContractMethod,
 } from "../common";
 
-export type InEuint64Struct = {
-  ctHash: BigNumberish;
-  securityZone: BigNumberish;
-  utype: BigNumberish;
-  signature: BytesLike;
-};
-
-export type InEuint64StructOutput = [
-  ctHash: bigint,
-  securityZone: bigint,
-  utype: bigint,
-  signature: string
-] & { ctHash: bigint; securityZone: bigint; utype: bigint; signature: string };
-
 export interface PrivateSwapPoolInterface extends Interface {
   getFunction(
     nameOrSignature:
       | "encReserve0"
       | "encReserve1"
       | "getAmountOut"
+      | "getReserves"
       | "initialize"
       | "lastEncAmountOut"
+      | "lastEncAmountOutOf"
       | "lastZeroForOne"
+      | "lastZeroForOneOf"
       | "owner"
       | "reserve0"
       | "reserve1"
@@ -69,23 +58,35 @@ export interface PrivateSwapPoolInterface extends Interface {
     values: [BigNumberish, boolean]
   ): string;
   encodeFunctionData(
+    functionFragment: "getReserves",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "initialize",
-    values: [BigNumberish, BigNumberish, InEuint64Struct, InEuint64Struct]
+    values: [BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "lastEncAmountOut",
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "lastEncAmountOutOf",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "lastZeroForOne",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "lastZeroForOneOf",
+    values: [AddressLike]
   ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(functionFragment: "reserve0", values?: undefined): string;
   encodeFunctionData(functionFragment: "reserve1", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "swap",
-    values: [BigNumberish, BigNumberish, boolean, InEuint64Struct]
+    values: [BigNumberish, BigNumberish, boolean]
   ): string;
   encodeFunctionData(functionFragment: "token0", values?: undefined): string;
   encodeFunctionData(functionFragment: "token1", values?: undefined): string;
@@ -102,13 +103,25 @@ export interface PrivateSwapPoolInterface extends Interface {
     functionFragment: "getAmountOut",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "getReserves",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "lastEncAmountOut",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "lastEncAmountOutOf",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "lastZeroForOne",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "lastZeroForOneOf",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
@@ -210,20 +223,29 @@ export interface PrivateSwapPool extends BaseContract {
     "view"
   >;
 
+  getReserves: TypedContractMethod<[], [[bigint, bigint]], "view">;
+
   initialize: TypedContractMethod<
-    [
-      amount0: BigNumberish,
-      amount1: BigNumberish,
-      encR0: InEuint64Struct,
-      encR1: InEuint64Struct
-    ],
+    [amount0: BigNumberish, amount1: BigNumberish],
     [void],
     "nonpayable"
   >;
 
   lastEncAmountOut: TypedContractMethod<[], [bigint], "view">;
 
+  lastEncAmountOutOf: TypedContractMethod<
+    [account: AddressLike],
+    [bigint],
+    "view"
+  >;
+
   lastZeroForOne: TypedContractMethod<[], [boolean], "view">;
+
+  lastZeroForOneOf: TypedContractMethod<
+    [account: AddressLike],
+    [boolean],
+    "view"
+  >;
 
   owner: TypedContractMethod<[], [string], "view">;
 
@@ -232,12 +254,7 @@ export interface PrivateSwapPool extends BaseContract {
   reserve1: TypedContractMethod<[], [bigint], "view">;
 
   swap: TypedContractMethod<
-    [
-      amountIn: BigNumberish,
-      minAmountOut: BigNumberish,
-      zeroForOne: boolean,
-      encAmountIn: InEuint64Struct
-    ],
+    [amountIn: BigNumberish, minAmountOut: BigNumberish, zeroForOne: boolean],
     [bigint],
     "nonpayable"
   >;
@@ -264,14 +281,12 @@ export interface PrivateSwapPool extends BaseContract {
     "view"
   >;
   getFunction(
+    nameOrSignature: "getReserves"
+  ): TypedContractMethod<[], [[bigint, bigint]], "view">;
+  getFunction(
     nameOrSignature: "initialize"
   ): TypedContractMethod<
-    [
-      amount0: BigNumberish,
-      amount1: BigNumberish,
-      encR0: InEuint64Struct,
-      encR1: InEuint64Struct
-    ],
+    [amount0: BigNumberish, amount1: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -279,8 +294,14 @@ export interface PrivateSwapPool extends BaseContract {
     nameOrSignature: "lastEncAmountOut"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
+    nameOrSignature: "lastEncAmountOutOf"
+  ): TypedContractMethod<[account: AddressLike], [bigint], "view">;
+  getFunction(
     nameOrSignature: "lastZeroForOne"
   ): TypedContractMethod<[], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "lastZeroForOneOf"
+  ): TypedContractMethod<[account: AddressLike], [boolean], "view">;
   getFunction(
     nameOrSignature: "owner"
   ): TypedContractMethod<[], [string], "view">;
@@ -293,12 +314,7 @@ export interface PrivateSwapPool extends BaseContract {
   getFunction(
     nameOrSignature: "swap"
   ): TypedContractMethod<
-    [
-      amountIn: BigNumberish,
-      minAmountOut: BigNumberish,
-      zeroForOne: boolean,
-      encAmountIn: InEuint64Struct
-    ],
+    [amountIn: BigNumberish, minAmountOut: BigNumberish, zeroForOne: boolean],
     [bigint],
     "nonpayable"
   >;

@@ -2,9 +2,11 @@
   "network": "eth-sepolia",
   "chainId": 11155111,
   "deployer": "0x573f08604704227A8b9A6551009Bd39C668Ff8F8",
-  "token0": "0xccd90F4A166f26568AAB390E299845928F9E702a",
-  "token1": "0xA8fba68aD76aa5f2215B5f41d77723605c6f2f92",
-  "pool": "0x05e3E59d1f02F3C24Dd889b90cf01c20e63E338C",
+  "token0": "0xE5fB992b9b58c3f1FEDEE40900B4B762e87457C5",
+  "token1": "0x0980F7b6D6C308f81ACF164c2e3821C1AaB2127E",
+  "pool": "0x813df543cbC212A948934aAEE560243631588F25",
   "decimals": 6,
-  "initializedLiquidity": "1000000"
+  "initializedLiquidity": "1000000000",
+  "initializedLiquidityTokens": "1000",
+  "faucetAmountTokens": "100"
 }

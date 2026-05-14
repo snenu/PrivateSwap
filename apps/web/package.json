@@ -10,11 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@cofhe/sdk": "^0.4.0",
+    "@cofhe/sdk": "^0.5.2",
     "@tanstack/react-query": "^5.62.0",
+    "@wagmi/core": "^2.14.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "@wagmi/core": "^2.14.0",
     "viem": "^2.21.0",
     "wagmi": "^2.13.0"
   },

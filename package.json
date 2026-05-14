@@ -9,6 +9,12 @@
     "build": "npm run compile -w packages/contracts && npm run build -w apps/web",
     "test": "npm run test -w packages/contracts",
     "compile": "npm run compile -w packages/contracts",
+    "lint": "npm run lint -w apps/web",
+    "verify:local": "npm run compile -w packages/contracts && npm run test -w packages/contracts && npm run lint -w apps/web && npm run build -w apps/web",
     "dev:web": "npm run dev -w apps/web"
+  },
+  "overrides": {
+    "elliptic": "6.6.1",
+    "lodash": "4.18.1"
   }
 }

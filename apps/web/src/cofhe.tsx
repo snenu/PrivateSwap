@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -13,22 +11,7 @@ import { chains } from '@cofhe/sdk/chains'
 import type { CofheClient } from '@cofhe/sdk'
 import { useAccount, useChainId, usePublicClient, useWalletClient } from 'wagmi'
 import { sepolia } from 'wagmi/chains'
-
-type CofheCtx = {
-  client: CofheClient | null
-  ready: boolean
-  connecting: boolean
-  error: string | null
-  retry: () => void
-}
-
-const CofheContext = createContext<CofheCtx>({
-  client: null,
-  ready: false,
-  connecting: false,
-  error: null,
-  retry: () => {},
-})
+import { CofheContext } from './cofhe-context'
 
 export function CofheProvider({ children }: { children: ReactNode }) {
   const { address, isConnected } = useAccount()
@@ -115,8 +98,4 @@ export function CofheProvider({ children }: { children: ReactNode }) {
   )
 
   return <CofheContext.Provider value={value}>{children}</CofheContext.Provider>
-}
-
-export function useCofhe() {
-  return useContext(CofheContext)
 }

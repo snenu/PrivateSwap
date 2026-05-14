@@ -7,9 +7,12 @@
     "test": "cross-env REPORT_GAS=true hardhat test",
     "clean": "rimraf ./artifacts ./cache ./types ./coverage ./coverage.json",
     "deploy:sepolia": "hardhat run scripts/deploy.ts --network eth-sepolia",
-    "mint:demo": "hardhat run scripts/mint-demo.ts --network eth-sepolia"
+    "verify:sepolia": "hardhat run scripts/verify-live.ts --network eth-sepolia",
+    "smoke:sepolia": "cross-env LIVE_WRITE_SWAP=true hardhat run scripts/verify-live.ts --network eth-sepolia",
+    "mint:test": "hardhat run scripts/mint-test.ts --network eth-sepolia"
   },
   "devDependencies": {
+    "@cofhe/sdk": "^0.5.2",
     "@fhenixprotocol/cofhe-contracts": "^0.0.13",
     "@fhenixprotocol/cofhe-mock-contracts": "^0.3.1",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
@@ -23,10 +26,9 @@
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.11.0",
-    "@cofhe/sdk": "^0.4.0",
     "chai": "^4.4.1",
-    "cofhejs": "^0.3.1",
     "cofhe-hardhat-plugin": "^0.3.1",
+    "cofhejs": "^0.3.1",
     "cross-env": "^7.0.3",
     "dotenv": "^16.4.5",
     "ethers": "^6.11.0",

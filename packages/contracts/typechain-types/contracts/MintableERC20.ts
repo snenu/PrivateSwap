@@ -29,7 +29,11 @@ export interface MintableERC20Interface extends Interface {
       | "allowance"
       | "approve"
       | "balanceOf"
+      | "claimFaucet"
       | "decimals"
+      | "faucetAmount"
+      | "faucetCooldown"
+      | "lastFaucetClaim"
       | "mint"
       | "name"
       | "owner"
@@ -42,7 +46,11 @@ export interface MintableERC20Interface extends Interface {
   ): FunctionFragment;
 
   getEvent(
-    nameOrSignatureOrTopic: "Approval" | "OwnershipTransferred" | "Transfer"
+    nameOrSignatureOrTopic:
+      | "Approval"
+      | "FaucetClaimed"
+      | "OwnershipTransferred"
+      | "Transfer"
   ): EventFragment;
 
   encodeFunctionData(
@@ -57,7 +65,23 @@ export interface MintableERC20Interface extends Interface {
     functionFragment: "balanceOf",
     values: [AddressLike]
   ): string;
+  encodeFunctionData(
+    functionFragment: "claimFaucet",
+    values?: undefined
+  ): string;
   encodeFunctionData(functionFragment: "decimals", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "faucetAmount",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "faucetCooldown",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "lastFaucetClaim",
+    values: [AddressLike]
+  ): string;
   encodeFunctionData(
     functionFragment: "mint",
     values: [AddressLike, BigNumberish]
@@ -89,7 +113,23 @@ export interface MintableERC20Interface extends Interface {
   decodeFunctionResult(functionFragment: "allowance", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "approve", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "balanceOf", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "claimFaucet",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "decimals", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "faucetAmount",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "faucetCooldown",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "lastFaucetClaim",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "mint", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "name", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
@@ -124,6 +164,19 @@ export namespace ApprovalEvent {
     owner: string;
     spender: string;
     value: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace FaucetClaimedEvent {
+  export type InputTuple = [account: AddressLike, amount: BigNumberish];
+  export type OutputTuple = [account: string, amount: bigint];
+  export interface OutputObject {
+    account: string;
+    amount: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -219,7 +272,19 @@ export interface MintableERC20 extends BaseContract {
 
   balanceOf: TypedContractMethod<[account: AddressLike], [bigint], "view">;
 
+  claimFaucet: TypedContractMethod<[], [void], "nonpayable">;
+
   decimals: TypedContractMethod<[], [bigint], "view">;
+
+  faucetAmount: TypedContractMethod<[], [bigint], "view">;
+
+  faucetCooldown: TypedContractMethod<[], [bigint], "view">;
+
+  lastFaucetClaim: TypedContractMethod<
+    [account: AddressLike],
+    [bigint],
+    "view"
+  >;
 
   mint: TypedContractMethod<
     [to: AddressLike, amount: BigNumberish],
@@ -277,8 +342,20 @@ export interface MintableERC20 extends BaseContract {
     nameOrSignature: "balanceOf"
   ): TypedContractMethod<[account: AddressLike], [bigint], "view">;
   getFunction(
+    nameOrSignature: "claimFaucet"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "decimals"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "faucetAmount"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "faucetCooldown"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "lastFaucetClaim"
+  ): TypedContractMethod<[account: AddressLike], [bigint], "view">;
   getFunction(
     nameOrSignature: "mint"
   ): TypedContractMethod<
@@ -327,6 +404,13 @@ export interface MintableERC20 extends BaseContract {
     ApprovalEvent.OutputObject
   >;
   getEvent(
+    key: "FaucetClaimed"
+  ): TypedContractEvent<
+    FaucetClaimedEvent.InputTuple,
+    FaucetClaimedEvent.OutputTuple,
+    FaucetClaimedEvent.OutputObject
+  >;
+  getEvent(
     key: "OwnershipTransferred"
   ): TypedContractEvent<
     OwnershipTransferredEvent.InputTuple,
@@ -351,6 +435,17 @@ export interface MintableERC20 extends BaseContract {
       ApprovalEvent.InputTuple,
       ApprovalEvent.OutputTuple,
       ApprovalEvent.OutputObject
+    >;
+
+    "FaucetClaimed(address,uint256)": TypedContractEvent<
+      FaucetClaimedEvent.InputTuple,
+      FaucetClaimedEvent.OutputTuple,
+      FaucetClaimedEvent.OutputObject
+    >;
+    FaucetClaimed: TypedContractEvent<
+      FaucetClaimedEvent.InputTuple,
+      FaucetClaimedEvent.OutputTuple,
+      FaucetClaimedEvent.OutputObject
     >;
 
     "OwnershipTransferred(address,address)": TypedContractEvent<

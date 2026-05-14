@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 /// @title PrivateSwapPool
-/// @notice Hybrid AMM: plaintext reserves drive ERC20 settlement; parallel FHE path mirrors x*y=k on euint64.
-/// @dev Amounts must fit uint64 so encrypted mirrors stay on euint64. Client encrypts the same numeric amount as `amountIn`.
+/// @notice Hybrid AMM: plaintext reserves drive ERC20 settlement; FHE state is derived in-contract from settled values.
+/// @dev The live Sepolia verifier supports the uint64 encrypted path reliably, so swaps guard the mirrored math bounds.
 contract PrivateSwapPool is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -23,10 +23,14 @@ contract PrivateSwapPool is ReentrancyGuard {
     euint64 public encReserve0;
     euint64 public encReserve1;
 
-    /// @notice Encrypted amount out from the last swap (CoFHE decrypt demo)
+    /// @notice Encrypted amount out from the most recent swap, kept for indexers and simple dashboards.
     euint64 public lastEncAmountOut;
 
     bool public lastZeroForOne;
+
+    /// @notice Caller-scoped encrypted amount out. Frontends should read this after a swap to avoid cross-user races.
+    mapping(address account => euint64 amountOut) public lastEncAmountOutOf;
+    mapping(address account => bool zeroForOne) public lastZeroForOneOf;
 
     event Initialized(uint256 reserve0, uint256 reserve1);
     event Swap(address indexed user, bool zeroForOne, uint256 amountIn, uint256 amountOut);
@@ -37,6 +41,7 @@ contract PrivateSwapPool is ReentrancyGuard {
     error ZeroAmount();
     error Slippage();
     error AmountTooLarge();
+    error EncryptedMathOverflow();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -49,12 +54,18 @@ contract PrivateSwapPool is ReentrancyGuard {
         owner = msg.sender;
     }
 
-    function initialize(
-        uint256 amount0,
-        uint256 amount1,
-        InEuint64 calldata encR0,
-        InEuint64 calldata encR1
-    ) external onlyOwner {
+    function initialize(uint256 amount0, uint256 amount1) external onlyOwner {
+        _initialize(amount0, amount1);
+
+        encReserve0 = FHE.asEuint64(amount0);
+        encReserve1 = FHE.asEuint64(amount1);
+        _allowEnc(encReserve0);
+        _allowEnc(encReserve1);
+
+        emit Initialized(reserve0, reserve1);
+    }
+
+    function _initialize(uint256 amount0, uint256 amount1) internal {
         if (reserve0 != 0 || reserve1 != 0) revert AlreadyInitialized();
         if (amount0 == 0 || amount1 == 0) revert ZeroAmount();
         if (amount0 > type(uint64).max || amount1 > type(uint64).max) revert AmountTooLarge();
@@ -64,20 +75,12 @@ contract PrivateSwapPool is ReentrancyGuard {
 
         reserve0 = amount0;
         reserve1 = amount1;
-
-        encReserve0 = FHE.asEuint64(encR0);
-        encReserve1 = FHE.asEuint64(encR1);
-        _allowEnc(encReserve0);
-        _allowEnc(encReserve1);
-
-        emit Initialized(reserve0, reserve1);
     }
 
     function swap(
         uint256 amountIn,
         uint256 minAmountOut,
-        bool zeroForOne,
-        InEuint64 calldata encAmountIn
+        bool zeroForOne
     ) external nonReentrant returns (uint256 amountOut) {
         if (amountIn == 0) revert ZeroAmount();
         if (reserve0 == 0 || reserve1 == 0) revert NotInitialized();
@@ -88,6 +91,8 @@ contract PrivateSwapPool is ReentrancyGuard {
 
         uint256 reserveIn = zeroForOne ? reserve0 : reserve1;
         uint256 reserveOut = zeroForOne ? reserve1 : reserve0;
+        if (reserveIn + amountIn > type(uint64).max || reserveOut > type(uint64).max) revert AmountTooLarge();
+        if (amountIn * reserveOut > type(uint64).max) revert EncryptedMathOverflow();
 
         amountOut = (amountIn * reserveOut) / (reserveIn + amountIn);
         if (amountOut < minAmountOut) revert Slippage();
@@ -102,7 +107,7 @@ contract PrivateSwapPool is ReentrancyGuard {
             reserve0 = reserve0 - amountOut;
         }
 
-        euint64 encIn = FHE.asEuint64(encAmountIn);
+        euint64 encIn = FHE.asEuint64(amountIn);
         euint64 rIn = zeroForOne ? encReserve0 : encReserve1;
         euint64 rOut = zeroForOne ? encReserve1 : encReserve0;
 
@@ -124,9 +129,13 @@ contract PrivateSwapPool is ReentrancyGuard {
         _allowEnc(encReserve0);
         _allowEnc(encReserve1);
 
+        lastEncAmountOutOf[msg.sender] = encOut;
+        lastZeroForOneOf[msg.sender] = zeroForOne;
         lastEncAmountOut = encOut;
-        _allowEnc(lastEncAmountOut);
         lastZeroForOne = zeroForOne;
+
+        _allowEnc(lastEncAmountOutOf[msg.sender]);
+        _allowEnc(lastEncAmountOut);
 
         tokenOut.safeTransfer(msg.sender, amountOut);
 
@@ -138,6 +147,10 @@ contract PrivateSwapPool is ReentrancyGuard {
         uint256 reserveIn = zeroForOne ? reserve0 : reserve1;
         uint256 reserveOut = zeroForOne ? reserve1 : reserve0;
         return (amountIn * reserveOut) / (reserveIn + amountIn);
+    }
+
+    function getReserves() external view returns (uint256, uint256) {
+        return (reserve0, reserve1);
     }
 
     function _allowEnc(euint64 v) internal {

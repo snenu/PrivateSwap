@@ -5,6 +5,7 @@ interface ImportMetaEnv {
   readonly VITE_TOKEN0_ADDRESS: string
   readonly VITE_TOKEN1_ADDRESS: string
   readonly VITE_SEPOLIA_RPC_URL?: string
+  readonly VITE_ENABLE_FAUCET?: string
 }
 
 interface ImportMeta {

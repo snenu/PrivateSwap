@@ -1,5 +1,5 @@
 /**
- * Mint demo PSA/PSB to the deployer wallet (owner-only). Run after deploy if you need test balances.
+ * Mint test PSA/PSB to the deployer wallet (owner-only). Run after deploy if you need test balances.
  */
 import * as fs from 'fs'
 import * as path from 'path'
@@ -15,7 +15,7 @@ async function main() {
 
   const tokenA = await hre.ethers.getContractAt('MintableERC20', dep.token0)
   const tokenB = await hre.ethers.getContractAt('MintableERC20', dep.token1)
-  const amt = 500_000n
+  const amt = 10_000n * 10n ** 6n
   await (await tokenA.mint(signer.address, amt)).wait()
   await (await tokenB.mint(signer.address, amt)).wait()
   console.log('Minted', amt.toString(), 'PSA + PSB to', signer.address)
