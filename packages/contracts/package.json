@@ -8,6 +8,7 @@
     "clean": "rimraf ./artifacts ./cache ./types ./coverage ./coverage.json",
     "deploy:sepolia": "hardhat run scripts/deploy.ts --network eth-sepolia",
     "verify:sepolia": "hardhat run scripts/verify-live.ts --network eth-sepolia",
+    "monitor:sepolia": "hardhat run scripts/monitor-live.ts --network eth-sepolia",
     "smoke:sepolia": "cross-env LIVE_WRITE_SWAP=true hardhat run scripts/verify-live.ts --network eth-sepolia",
     "mint:test": "hardhat run scripts/mint-test.ts --network eth-sepolia"
   },
@@ -15,11 +16,10 @@
     "@cofhe/sdk": "^0.5.2",
     "@fhenixprotocol/cofhe-contracts": "^0.0.13",
     "@fhenixprotocol/cofhe-mock-contracts": "^0.3.1",
-    "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
-    "@nomicfoundation/hardhat-ethers": "^3.0.0",
-    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
-    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@nomicfoundation/hardhat-chai-matchers": "2.0.8",
+    "@nomicfoundation/hardhat-ethers": "3.0.8",
+    "@nomicfoundation/hardhat-network-helpers": "1.0.12",
+    "@nomicfoundation/hardhat-verify": "2.0.13",
     "@openzeppelin/contracts": "^5.0.0",
     "@typechain/ethers-v6": "^0.5.0",
     "@typechain/hardhat": "^9.0.0",
@@ -35,6 +35,7 @@
     "hardhat": "2.22.19",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
+    "typechain": "^8.3.2",
     "typescript": "^5.5.2"
   }
 }

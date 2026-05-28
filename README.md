@@ -14,6 +14,8 @@ Make sure the hosted environment variables match the current addresses below bef
 - A **PrivateSwapPool** contract that:
   - Settles trades using normal **uint256** reserves and ERC20 `transfer` / `transferFrom` (so swaps work like a familiar AMM on testnet).
   - In parallel, maintains **encrypted reserves** and computes an **encrypted amount out** using **FHE** (`euint64`) so CoFHE can prove the full **FHE compute → decrypt for view** loop. The encrypted mirror is derived in-contract from settled public amounts, which prevents callers from submitting mismatched public and encrypted swap inputs. Swap bounds guard the mirrored encrypted multiplication so scaled token math stays inside the live Sepolia verifier path, and encrypted outputs are stored per user to avoid cross-wallet races.
+  - Tracks LP shares on-chain, supports proportional add/remove liquidity, and keeps the encrypted reserve mirror synchronized through each liquidity mutation.
+  - Supports optional committed swap intents through `commitSwap` + `swapWithCommitment`, giving the app a delayed-reveal order path while keeping normal one-transaction swaps available.
 
 ## What it does (user flow)
 
@@ -21,7 +23,9 @@ Make sure the hosted environment variables match the current addresses below bef
 2. The app initializes the **CoFHE client** and a **self-permit** (required for decryption APIs).
 3. If needed, claim test PSA/PSB from the token faucets.
 4. Choose swap direction, amount, and slippage.
-5. **Swap and decrypt** runs: exact ERC20 approval if needed, pool `swap`, then **view decryption** of your wallet-scoped encrypted amount out for display.
+5. Optional: enable the committed-intent path, which submits a commitment transaction before the reveal/swap transaction.
+6. **Swap and decrypt** runs: exact ERC20 approval if needed, pool `swap` or `swapWithCommitment`, then **view decryption** of your wallet-scoped encrypted amount out for display.
+7. Add or remove pool liquidity from the Liquidity view, with exact ERC20 approvals and on-chain LP share accounting.
 
 ## Why it exists (use cases)
 
@@ -35,7 +39,7 @@ Make sure the hosted environment variables match the current addresses below bef
 - **Standard ERC20** settlement on Sepolia means **transfer amounts** can still be visible in the usual ways. This **hybrid** keeps the stack **working end-to-end** on public testnet without FHERC20 in v1.
 - Do **not** treat this as full transactional hiding of size on Ethereum today; treat it as a **real FHE integration** plus transparent ERC20 plumbing.
 - The pool intentionally derives encrypted swap inputs from the settled public `amountIn` instead of accepting a separate `InEuint64`; that removes a public/encrypted mismatch attack path.
-- This repo is production-grade for supported live testnets.
+- This repo is hardened for a live Sepolia demo, but it is not mainnet-ready until the contracts, dependencies, and CoFHE trust assumptions have gone through an external production audit.
 
 ## Live deployment (Sepolia)
 
@@ -45,11 +49,21 @@ Contracts are deployed to **Ethereum Sepolia**. Addresses are stored in [`packag
 
 | | Address |
 |---|---------|
-| **PrivateSwapPool** | `0x813df543cbC212A948934aAEE560243631588F25` |
-| **PSA (token0)** | `0xE5fB992b9b58c3f1FEDEE40900B4B762e87457C5` |
-| **PSB (token1)** | `0x0980F7b6D6C308f81ACF164c2e3821C1AaB2127E` |
+| **PrivateSwapPool** | `0x8d86FA08eE472389773ad5dE3423f5A8841Dd49d` |
+| **PSA (token0)** | `0x5698e701ea238aA1Ba76385f440B4B871221Dc5a` |
+| **PSB (token1)** | `0x2794e2F6616994657869a474670a58A07B9095db` |
+| **Swap fee** | `30` bps (0.30%) |
+| **Transaction deadline** | `1200` seconds |
 
-Copy `pool`, `token0`, and `token1` into `apps/web/.env` as `VITE_POOL_ADDRESS`, `VITE_TOKEN0_ADDRESS`, and `VITE_TOKEN1_ADDRESS`. Optionally set `VITE_SEPOLIA_RPC_URL` to your RPC (Alchemy, Infura, etc.) and `VITE_ENABLE_FAUCET=false` to hide faucet actions.
+The current Sepolia deployment includes the Wave 5 pool entrypoints for committed swaps, commitment cancellation, LP accounting, add/remove liquidity, a 30 bps LP fee, transaction deadline protection, indexed swap history, and the encrypted CoFHE reserve mirror.
+
+Copy `pool`, `token0`, and `token1` into `apps/web/.env` as `VITE_POOL_ADDRESS`, `VITE_TOKEN0_ADDRESS`, and `VITE_TOKEN1_ADDRESS`. Optionally set `VITE_SEPOLIA_RPC_URL` to your RPC (Alchemy, Infura, etc.). Keep `VITE_ENABLE_FAUCET=true` for judged demos so users can claim PSA/PSB; set it to `false` only when you intentionally want to hide test-token actions.
+
+For multiple deployed pools, set `VITE_POOLS_JSON` instead of the single-pool variables:
+
+```json
+[{"id":"psa-psb","label":"PSA / PSB","pool":"0x...","token0":"0x...","token1":"0x...","token0Symbol":"PSA","token1Symbol":"PSB"}]
+```
 
 **Never commit** `.env` files or **private keys** to git. The repository ignores `.env` by default.
 
@@ -108,7 +122,7 @@ The repository includes both a root `vercel.json` for monorepo deployments and `
 - `VITE_TOKEN0_ADDRESS`
 - `VITE_TOKEN1_ADDRESS`
 - `VITE_SEPOLIA_RPC_URL`
-- `VITE_ENABLE_FAUCET=false` for a cleaner production-facing preview
+- `VITE_ENABLE_FAUCET=true` for hackathon judging and demos, or `false` for a cleaner production-facing preview
 
 After changing any address, redeploy the web app so the hosted preview is not pointing at stale contracts.
 
@@ -124,7 +138,15 @@ This read-only check confirms deployed bytecode, token metadata, reserves, fauce
 npm run smoke:sepolia -w packages/contracts
 ```
 
-The write check submits `swap`, reads `lastEncAmountOutOf(deployer)`, decrypts via `decryptForView`, and fails if the decrypted value does not match the AMM quote.
+The write check submits `swap`, reads the mined `Swap` event amount, reads `lastEncAmountOutOf(deployer)`, decrypts via `decryptForView`, and fails if the decrypted value does not match the settled on-chain output.
+
+For production monitoring and indexed activity checks:
+
+```bash
+npm run monitor:sepolia -w packages/contracts
+```
+
+The monitor is read-only. It checks bytecode, reserve/token-balance accounting, live quotes in both directions, and recent indexed `Swap` events. Set `MONITOR_REQUIRE_RECENT_SWAP=true` if your deployment should alert when no swap appears inside the lookback window.
 
 ## Roadmap
 
@@ -157,7 +179,7 @@ Delivered:
 - Fresh Sepolia deployment for PSA, PSB, and `PrivateSwapPool`.
 - Deployment metadata stored in `packages/contracts/deployments/sepolia.json`.
 - Read-only live verifier for deployed bytecode, metadata, reserves, faucet amount, and quotes.
-- Write smoke verifier that submits a real Sepolia swap, reads `lastEncAmountOutOf`, decrypts with CoFHE, and checks the decrypted output against the AMM quote.
+- Write smoke verifier that submits a real Sepolia swap, reads the mined `Swap` event, reads `lastEncAmountOutOf`, decrypts with CoFHE, and checks the decrypted output against the settled on-chain output.
 - Hardhat mock FHE test coverage for initialization, swaps, per-user encrypted outputs, reserve mirroring, and faucets.
 
 ### Wave 4 — Done: Production Web Release
@@ -169,16 +191,31 @@ Delivered:
 - Vercel configuration for the existing `apps/web` project root.
 - Vercel production environment variables for the current Sepolia deployment.
 - Production deployment at https://private-swap-ochre.vercel.app.
-- Browser verification of the deployed app: current pool address, live quote, hidden production faucet, balances/liquidity panels, and no console errors.
+- Browser verification of the deployed app: current pool address, live quote, faucet controls, balances/liquidity panels, and no console errors.
 - App-local lockfile and clean app-local production audit path.
 
-### Wave 5 — Remaining / Future Work
+### Wave 5 — Done: Production Hardening And Operational UX
 
-- Move from public ERC20 settlement to confidential token settlement when production-ready FHERC20 or equivalent primitives are available.
-- Add deeper privacy mechanisms such as batched private orders, private routing, or delayed reveals.
-- Add external contract audit coverage before any higher-value testnet or production demo.
-- Add production monitoring, alerting, analytics, and indexed historical swap views.
-- Add multi-pool routing and richer liquidity-management workflows.
+Delivered:
+
+- On-chain LP shares with `addLiquidity`, `removeLiquidity`, `quoteAddLiquidity`, and `quoteRemoveLiquidity`.
+- Optional committed swap intents with `commitSwap` and `swapWithCommitment`.
+- Commitment cancellation for abandoned delayed-reveal swap intents.
+- A 30 bps LP fee and a 20 minute deadline on swaps and liquidity mutations.
+- Indexed swap history in the web app using live Sepolia `Swap` events.
+- Pool health checks in the web app, including reserve-vs-token-balance accounting.
+- Multi-pool-ready web configuration through `VITE_POOLS_JSON`, while keeping the existing single-pool env variables supported.
+- Production monitor script for bytecode, reserves, quotes, accounting, and recent indexed activity.
+- Frontend CoFHE session handling hardened against wallet/network switches while a permit setup is still in flight.
+- Public quote API now enforces the same live encrypted math bounds as swap execution, so integrations cannot receive an executable-looking quote for a swap that the FHE mirror will reject.
+- Live write smoke checks compare decrypted CoFHE output against the mined `Swap` event output, avoiding stale pre-submit quote false failures.
+- Expanded Hardhat mock tests for committed swaps, LP reserve synchronization, and encrypted math quote bounds.
+
+Still intentionally not claimed:
+
+- Full confidential token settlement is not enabled in production mode. Fhenix has FHERC20 primitives, but the currently published package warns that those contracts are in active development and unaudited. PrivateSwap therefore keeps the honest hybrid settlement model until FHERC20 or equivalent primitives are audited and production-ready for this use case.
+- An external audit has not been performed. The repo now has stronger tests and an audit handoff checklist in [`docs/security-audit-checklist.md`](docs/security-audit-checklist.md), but a third-party review is still required before higher-value demos.
+- A clean dependency-security audit is not claimed. The current Fhenix, Hardhat, wagmi, and wallet stacks still bring transitive advisories that should be tracked with upstream package updates before a real-money launch.
 
 ## Troubleshooting
 

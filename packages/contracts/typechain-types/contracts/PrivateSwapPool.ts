@@ -26,6 +26,11 @@ import type {
 export interface PrivateSwapPoolInterface extends Interface {
   getFunction(
     nameOrSignature:
+      | "BPS_DENOMINATOR"
+      | "SWAP_FEE_BPS"
+      | "addLiquidity"
+      | "cancelCommitment"
+      | "commitSwap"
       | "encReserve0"
       | "encReserve1"
       | "getAmountOut"
@@ -35,16 +40,51 @@ export interface PrivateSwapPoolInterface extends Interface {
       | "lastEncAmountOutOf"
       | "lastZeroForOne"
       | "lastZeroForOneOf"
+      | "liquidityOf"
       | "owner"
+      | "quoteAddLiquidity"
+      | "quoteRemoveLiquidity"
+      | "removeLiquidity"
       | "reserve0"
       | "reserve1"
       | "swap"
+      | "swapCommitments"
+      | "swapWithCommitment"
       | "token0"
       | "token1"
+      | "totalLiquidity"
   ): FunctionFragment;
 
-  getEvent(nameOrSignatureOrTopic: "Initialized" | "Swap"): EventFragment;
+  getEvent(
+    nameOrSignatureOrTopic:
+      | "Initialized"
+      | "LiquidityAdded"
+      | "LiquidityRemoved"
+      | "Swap"
+      | "SwapCommitmentCancelled"
+      | "SwapCommitted"
+  ): EventFragment;
 
+  encodeFunctionData(
+    functionFragment: "BPS_DENOMINATOR",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "SWAP_FEE_BPS",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "addLiquidity",
+    values: [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "cancelCommitment",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "commitSwap",
+    values: [BytesLike]
+  ): string;
   encodeFunctionData(
     functionFragment: "encReserve0",
     values?: undefined
@@ -81,16 +121,61 @@ export interface PrivateSwapPoolInterface extends Interface {
     functionFragment: "lastZeroForOneOf",
     values: [AddressLike]
   ): string;
+  encodeFunctionData(
+    functionFragment: "liquidityOf",
+    values: [AddressLike]
+  ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "quoteAddLiquidity",
+    values: [BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "quoteRemoveLiquidity",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "removeLiquidity",
+    values: [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+  ): string;
   encodeFunctionData(functionFragment: "reserve0", values?: undefined): string;
   encodeFunctionData(functionFragment: "reserve1", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "swap",
-    values: [BigNumberish, BigNumberish, boolean]
+    values: [BigNumberish, BigNumberish, boolean, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "swapCommitments",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "swapWithCommitment",
+    values: [BigNumberish, BigNumberish, boolean, BytesLike, BigNumberish]
   ): string;
   encodeFunctionData(functionFragment: "token0", values?: undefined): string;
   encodeFunctionData(functionFragment: "token1", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "totalLiquidity",
+    values?: undefined
+  ): string;
 
+  decodeFunctionResult(
+    functionFragment: "BPS_DENOMINATOR",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "SWAP_FEE_BPS",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "addLiquidity",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "cancelCommitment",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "commitSwap", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "encReserve0",
     data: BytesLike
@@ -124,18 +209,108 @@ export interface PrivateSwapPoolInterface extends Interface {
     functionFragment: "lastZeroForOneOf",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "liquidityOf",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "quoteAddLiquidity",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "quoteRemoveLiquidity",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "removeLiquidity",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "reserve0", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "reserve1", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "swap", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "swapCommitments",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "swapWithCommitment",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "token0", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "token1", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "totalLiquidity",
+    data: BytesLike
+  ): Result;
 }
 
 export namespace InitializedEvent {
   export type InputTuple = [reserve0: BigNumberish, reserve1: BigNumberish];
   export type OutputTuple = [reserve0: bigint, reserve1: bigint];
   export interface OutputObject {
+    reserve0: bigint;
+    reserve1: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace LiquidityAddedEvent {
+  export type InputTuple = [
+    provider: AddressLike,
+    amount0: BigNumberish,
+    amount1: BigNumberish,
+    liquidity: BigNumberish,
+    reserve0: BigNumberish,
+    reserve1: BigNumberish
+  ];
+  export type OutputTuple = [
+    provider: string,
+    amount0: bigint,
+    amount1: bigint,
+    liquidity: bigint,
+    reserve0: bigint,
+    reserve1: bigint
+  ];
+  export interface OutputObject {
+    provider: string;
+    amount0: bigint;
+    amount1: bigint;
+    liquidity: bigint;
+    reserve0: bigint;
+    reserve1: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace LiquidityRemovedEvent {
+  export type InputTuple = [
+    provider: AddressLike,
+    amount0: BigNumberish,
+    amount1: BigNumberish,
+    liquidity: BigNumberish,
+    reserve0: BigNumberish,
+    reserve1: BigNumberish
+  ];
+  export type OutputTuple = [
+    provider: string,
+    amount0: bigint,
+    amount1: bigint,
+    liquidity: bigint,
+    reserve0: bigint,
+    reserve1: bigint
+  ];
+  export interface OutputObject {
+    provider: string;
+    amount0: bigint;
+    amount1: bigint;
+    liquidity: bigint;
     reserve0: bigint;
     reserve1: bigint;
   }
@@ -163,6 +338,32 @@ export namespace SwapEvent {
     zeroForOne: boolean;
     amountIn: bigint;
     amountOut: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace SwapCommitmentCancelledEvent {
+  export type InputTuple = [user: AddressLike, commitment: BytesLike];
+  export type OutputTuple = [user: string, commitment: string];
+  export interface OutputObject {
+    user: string;
+    commitment: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace SwapCommittedEvent {
+  export type InputTuple = [user: AddressLike, commitment: BytesLike];
+  export type OutputTuple = [user: string, commitment: string];
+  export interface OutputObject {
+    user: string;
+    commitment: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -213,6 +414,35 @@ export interface PrivateSwapPool extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
+  BPS_DENOMINATOR: TypedContractMethod<[], [bigint], "view">;
+
+  SWAP_FEE_BPS: TypedContractMethod<[], [bigint], "view">;
+
+  addLiquidity: TypedContractMethod<
+    [
+      amount0Desired: BigNumberish,
+      amount1Desired: BigNumberish,
+      minLiquidity: BigNumberish,
+      deadline: BigNumberish
+    ],
+    [
+      [bigint, bigint, bigint] & {
+        amount0: bigint;
+        amount1: bigint;
+        liquidity: bigint;
+      }
+    ],
+    "nonpayable"
+  >;
+
+  cancelCommitment: TypedContractMethod<[], [void], "nonpayable">;
+
+  commitSwap: TypedContractMethod<
+    [commitment: BytesLike],
+    [void],
+    "nonpayable"
+  >;
+
   encReserve0: TypedContractMethod<[], [bigint], "view">;
 
   encReserve1: TypedContractMethod<[], [bigint], "view">;
@@ -247,14 +477,68 @@ export interface PrivateSwapPool extends BaseContract {
     "view"
   >;
 
+  liquidityOf: TypedContractMethod<[account: AddressLike], [bigint], "view">;
+
   owner: TypedContractMethod<[], [string], "view">;
+
+  quoteAddLiquidity: TypedContractMethod<
+    [amount0Desired: BigNumberish, amount1Desired: BigNumberish],
+    [
+      [bigint, bigint, bigint] & {
+        amount0: bigint;
+        amount1: bigint;
+        liquidity: bigint;
+      }
+    ],
+    "view"
+  >;
+
+  quoteRemoveLiquidity: TypedContractMethod<
+    [liquidity: BigNumberish],
+    [[bigint, bigint] & { amount0: bigint; amount1: bigint }],
+    "view"
+  >;
+
+  removeLiquidity: TypedContractMethod<
+    [
+      liquidity: BigNumberish,
+      minAmount0: BigNumberish,
+      minAmount1: BigNumberish,
+      deadline: BigNumberish
+    ],
+    [[bigint, bigint] & { amount0: bigint; amount1: bigint }],
+    "nonpayable"
+  >;
 
   reserve0: TypedContractMethod<[], [bigint], "view">;
 
   reserve1: TypedContractMethod<[], [bigint], "view">;
 
   swap: TypedContractMethod<
-    [amountIn: BigNumberish, minAmountOut: BigNumberish, zeroForOne: boolean],
+    [
+      amountIn: BigNumberish,
+      minAmountOut: BigNumberish,
+      zeroForOne: boolean,
+      deadline: BigNumberish
+    ],
+    [bigint],
+    "nonpayable"
+  >;
+
+  swapCommitments: TypedContractMethod<
+    [account: AddressLike],
+    [string],
+    "view"
+  >;
+
+  swapWithCommitment: TypedContractMethod<
+    [
+      amountIn: BigNumberish,
+      minAmountOut: BigNumberish,
+      zeroForOne: boolean,
+      salt: BytesLike,
+      deadline: BigNumberish
+    ],
     [bigint],
     "nonpayable"
   >;
@@ -263,10 +547,42 @@ export interface PrivateSwapPool extends BaseContract {
 
   token1: TypedContractMethod<[], [string], "view">;
 
+  totalLiquidity: TypedContractMethod<[], [bigint], "view">;
+
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
 
+  getFunction(
+    nameOrSignature: "BPS_DENOMINATOR"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "SWAP_FEE_BPS"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "addLiquidity"
+  ): TypedContractMethod<
+    [
+      amount0Desired: BigNumberish,
+      amount1Desired: BigNumberish,
+      minLiquidity: BigNumberish,
+      deadline: BigNumberish
+    ],
+    [
+      [bigint, bigint, bigint] & {
+        amount0: bigint;
+        amount1: bigint;
+        liquidity: bigint;
+      }
+    ],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "cancelCommitment"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "commitSwap"
+  ): TypedContractMethod<[commitment: BytesLike], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "encReserve0"
   ): TypedContractMethod<[], [bigint], "view">;
@@ -303,8 +619,43 @@ export interface PrivateSwapPool extends BaseContract {
     nameOrSignature: "lastZeroForOneOf"
   ): TypedContractMethod<[account: AddressLike], [boolean], "view">;
   getFunction(
+    nameOrSignature: "liquidityOf"
+  ): TypedContractMethod<[account: AddressLike], [bigint], "view">;
+  getFunction(
     nameOrSignature: "owner"
   ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "quoteAddLiquidity"
+  ): TypedContractMethod<
+    [amount0Desired: BigNumberish, amount1Desired: BigNumberish],
+    [
+      [bigint, bigint, bigint] & {
+        amount0: bigint;
+        amount1: bigint;
+        liquidity: bigint;
+      }
+    ],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "quoteRemoveLiquidity"
+  ): TypedContractMethod<
+    [liquidity: BigNumberish],
+    [[bigint, bigint] & { amount0: bigint; amount1: bigint }],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "removeLiquidity"
+  ): TypedContractMethod<
+    [
+      liquidity: BigNumberish,
+      minAmount0: BigNumberish,
+      minAmount1: BigNumberish,
+      deadline: BigNumberish
+    ],
+    [[bigint, bigint] & { amount0: bigint; amount1: bigint }],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "reserve0"
   ): TypedContractMethod<[], [bigint], "view">;
@@ -314,7 +665,28 @@ export interface PrivateSwapPool extends BaseContract {
   getFunction(
     nameOrSignature: "swap"
   ): TypedContractMethod<
-    [amountIn: BigNumberish, minAmountOut: BigNumberish, zeroForOne: boolean],
+    [
+      amountIn: BigNumberish,
+      minAmountOut: BigNumberish,
+      zeroForOne: boolean,
+      deadline: BigNumberish
+    ],
+    [bigint],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "swapCommitments"
+  ): TypedContractMethod<[account: AddressLike], [string], "view">;
+  getFunction(
+    nameOrSignature: "swapWithCommitment"
+  ): TypedContractMethod<
+    [
+      amountIn: BigNumberish,
+      minAmountOut: BigNumberish,
+      zeroForOne: boolean,
+      salt: BytesLike,
+      deadline: BigNumberish
+    ],
     [bigint],
     "nonpayable"
   >;
@@ -324,6 +696,9 @@ export interface PrivateSwapPool extends BaseContract {
   getFunction(
     nameOrSignature: "token1"
   ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "totalLiquidity"
+  ): TypedContractMethod<[], [bigint], "view">;
 
   getEvent(
     key: "Initialized"
@@ -333,11 +708,39 @@ export interface PrivateSwapPool extends BaseContract {
     InitializedEvent.OutputObject
   >;
   getEvent(
+    key: "LiquidityAdded"
+  ): TypedContractEvent<
+    LiquidityAddedEvent.InputTuple,
+    LiquidityAddedEvent.OutputTuple,
+    LiquidityAddedEvent.OutputObject
+  >;
+  getEvent(
+    key: "LiquidityRemoved"
+  ): TypedContractEvent<
+    LiquidityRemovedEvent.InputTuple,
+    LiquidityRemovedEvent.OutputTuple,
+    LiquidityRemovedEvent.OutputObject
+  >;
+  getEvent(
     key: "Swap"
   ): TypedContractEvent<
     SwapEvent.InputTuple,
     SwapEvent.OutputTuple,
     SwapEvent.OutputObject
+  >;
+  getEvent(
+    key: "SwapCommitmentCancelled"
+  ): TypedContractEvent<
+    SwapCommitmentCancelledEvent.InputTuple,
+    SwapCommitmentCancelledEvent.OutputTuple,
+    SwapCommitmentCancelledEvent.OutputObject
+  >;
+  getEvent(
+    key: "SwapCommitted"
+  ): TypedContractEvent<
+    SwapCommittedEvent.InputTuple,
+    SwapCommittedEvent.OutputTuple,
+    SwapCommittedEvent.OutputObject
   >;
 
   filters: {
@@ -352,6 +755,28 @@ export interface PrivateSwapPool extends BaseContract {
       InitializedEvent.OutputObject
     >;
 
+    "LiquidityAdded(address,uint256,uint256,uint256,uint256,uint256)": TypedContractEvent<
+      LiquidityAddedEvent.InputTuple,
+      LiquidityAddedEvent.OutputTuple,
+      LiquidityAddedEvent.OutputObject
+    >;
+    LiquidityAdded: TypedContractEvent<
+      LiquidityAddedEvent.InputTuple,
+      LiquidityAddedEvent.OutputTuple,
+      LiquidityAddedEvent.OutputObject
+    >;
+
+    "LiquidityRemoved(address,uint256,uint256,uint256,uint256,uint256)": TypedContractEvent<
+      LiquidityRemovedEvent.InputTuple,
+      LiquidityRemovedEvent.OutputTuple,
+      LiquidityRemovedEvent.OutputObject
+    >;
+    LiquidityRemoved: TypedContractEvent<
+      LiquidityRemovedEvent.InputTuple,
+      LiquidityRemovedEvent.OutputTuple,
+      LiquidityRemovedEvent.OutputObject
+    >;
+
     "Swap(address,bool,uint256,uint256)": TypedContractEvent<
       SwapEvent.InputTuple,
       SwapEvent.OutputTuple,
@@ -361,6 +786,28 @@ export interface PrivateSwapPool extends BaseContract {
       SwapEvent.InputTuple,
       SwapEvent.OutputTuple,
       SwapEvent.OutputObject
+    >;
+
+    "SwapCommitmentCancelled(address,bytes32)": TypedContractEvent<
+      SwapCommitmentCancelledEvent.InputTuple,
+      SwapCommitmentCancelledEvent.OutputTuple,
+      SwapCommitmentCancelledEvent.OutputObject
+    >;
+    SwapCommitmentCancelled: TypedContractEvent<
+      SwapCommitmentCancelledEvent.InputTuple,
+      SwapCommitmentCancelledEvent.OutputTuple,
+      SwapCommitmentCancelledEvent.OutputObject
+    >;
+
+    "SwapCommitted(address,bytes32)": TypedContractEvent<
+      SwapCommittedEvent.InputTuple,
+      SwapCommittedEvent.OutputTuple,
+      SwapCommittedEvent.OutputObject
+    >;
+    SwapCommitted: TypedContractEvent<
+      SwapCommittedEvent.InputTuple,
+      SwapCommittedEvent.OutputTuple,
+      SwapCommittedEvent.OutputObject
     >;
   };
 }

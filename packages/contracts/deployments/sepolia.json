@@ -1,12 +1,22 @@
 {
   "network": "eth-sepolia",
   "chainId": 11155111,
-  "deployer": "0x573f08604704227A8b9A6551009Bd39C668Ff8F8",
-  "token0": "0xE5fB992b9b58c3f1FEDEE40900B4B762e87457C5",
-  "token1": "0x0980F7b6D6C308f81ACF164c2e3821C1AaB2127E",
-  "pool": "0x813df543cbC212A948934aAEE560243631588F25",
+  "deployer": "0xB3A78E23993cc416DF79c8E954e427Ef15063b20",
+  "token0": "0x5698e701ea238aA1Ba76385f440B4B871221Dc5a",
+  "token1": "0x2794e2F6616994657869a474670a58A07B9095db",
+  "pool": "0x8d86FA08eE472389773ad5dE3423f5A8841Dd49d",
   "decimals": 6,
   "initializedLiquidity": "1000000000",
   "initializedLiquidityTokens": "1000",
-  "faucetAmountTokens": "100"
+  "faucetAmountTokens": "100",
+  "swapFeeBps": 30,
+  "txDeadlineSeconds": 1200,
+  "features": [
+    "swap",
+    "swapFee",
+    "deadlineProtection",
+    "committedSwap",
+    "liquidityManagement",
+    "fheReserveMirror"
+  ]
 }

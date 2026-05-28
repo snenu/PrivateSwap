@@ -4,6 +4,7 @@ interface ImportMetaEnv {
   readonly VITE_POOL_ADDRESS: string
   readonly VITE_TOKEN0_ADDRESS: string
   readonly VITE_TOKEN1_ADDRESS: string
+  readonly VITE_POOLS_JSON?: string
   readonly VITE_SEPOLIA_RPC_URL?: string
   readonly VITE_ENABLE_FAUCET?: string
 }

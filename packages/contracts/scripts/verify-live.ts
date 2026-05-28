@@ -21,6 +21,14 @@ type Deployment = {
   pool: string
 }
 
+async function maybeRead<T>(read: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await read()
+  } catch {
+    return fallback
+  }
+}
+
 function normalizePrivateKey(value: string): `0x${string}` {
   return value.startsWith('0x') ? (value as `0x${string}`) : `0x${value}`
 }
@@ -32,6 +40,43 @@ async function sleep(ms: number) {
 async function requireCode(address: string, label: string) {
   const code = await hre.ethers.provider.getCode(address)
   if (code === '0x') throw new Error(`${label} has no contract code at ${address}`)
+}
+
+function asIntegerEnv(name: string, fallback: number) {
+  const value = process.env[name]
+  if (!value) return fallback
+
+  const parsed = Number(value)
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    throw new Error(`${name} must be a non-negative safe integer, got "${value}"`)
+  }
+
+  return parsed
+}
+
+function swapAmountOutFromLogs(
+  poolInterface: { parseLog: (log: { data: string; topics: string[] }) => unknown },
+  poolAddress: string,
+  logs: readonly { address: string; data: string; topics: readonly string[] }[],
+) {
+  for (const log of logs) {
+    if (log.address.toLowerCase() !== poolAddress.toLowerCase()) continue
+
+    try {
+      const parsed = poolInterface.parseLog({ data: log.data, topics: [...log.topics] }) as {
+        name?: string
+        args?: { amountOut?: bigint }
+      } | null
+
+      if (parsed?.name === 'Swap' && typeof parsed.args?.amountOut === 'bigint') {
+        return parsed.args.amountOut
+      }
+    } catch {
+      /* Ignore token logs in the same transaction receipt. */
+    }
+  }
+
+  return undefined
 }
 
 async function decryptWithRetry(
@@ -75,6 +120,12 @@ async function main() {
 
   const [reserve0, reserve1] = await pool.getReserves()
   const quote = await pool.getAmountOut(10n * 10n ** 6n, true)
+  const currentBlock = await hre.ethers.provider.getBlockNumber()
+  const fromBlock = Math.max(0, currentBlock - asIntegerEnv('SWAP_HISTORY_BLOCKS', 50000))
+  const swaps = await maybeRead(() => pool.queryFilter(pool.filters.Swap(), fromBlock, currentBlock), [])
+  const totalLiquidity = await maybeRead(() => pool.totalLiquidity(), 0n)
+  const poolToken0Balance = await token0.balanceOf(deployment.pool)
+  const poolToken1Balance = await token1.balanceOf(deployment.pool)
   const summary = {
     network: hre.network.name,
     pool: deployment.pool,
@@ -92,11 +143,28 @@ async function main() {
       token0: reserve0.toString(),
       token1: reserve1.toString(),
     },
+    poolBalances: {
+      token0: poolToken0Balance.toString(),
+      token1: poolToken1Balance.toString(),
+      matchReserves: poolToken0Balance === reserve0 && poolToken1Balance === reserve1,
+    },
+    totalLiquidity: totalLiquidity.toString(),
+    swapFeeBps: (await pool.SWAP_FEE_BPS()).toString(),
     quote10Token0ToToken1: quote.toString(),
     faucetAmount: (await token0.faucetAmount()).toString(),
+    recentSwaps: {
+      fromBlock,
+      toBlock: currentBlock,
+      count: swaps.length,
+      lastTxHash: swaps.length > 0 ? swaps[swaps.length - 1].transactionHash : null,
+    },
   }
 
   console.log(JSON.stringify(summary, null, 2))
+
+  if (poolToken0Balance !== reserve0 || poolToken1Balance !== reserve1) {
+    throw new Error('Pool ERC20 balances do not match recorded reserves.')
+  }
 
   if (process.env.LIVE_WRITE_SWAP !== 'true') return
 
@@ -116,6 +184,10 @@ async function main() {
 
   const rpcUrl = process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com'
   const account = privateKeyToAccount(normalizePrivateKey(process.env.PRIVATE_KEY))
+  if (account.address.toLowerCase() !== signer.address.toLowerCase()) {
+    throw new Error(`PRIVATE_KEY account ${account.address} does not match Hardhat signer ${signer.address}`)
+  }
+
   const publicClient = createPublicClient({ chain: sepolia, transport: http(rpcUrl) })
   const walletClient = createWalletClient({ account, chain: sepolia, transport: http(rpcUrl) })
   const cofheClient = createCofheClient(createCofheConfig({ supportedChains: [chains.sepolia] }))
@@ -123,15 +195,21 @@ async function main() {
   await cofheClient.connect(publicClient, walletClient)
   await cofheClient.permits.getOrCreateSelfPermit()
 
-  const tx = await pool.swap(amountIn, 0n, true)
+  const latest = await hre.ethers.provider.getBlock('latest')
+  const deadline = BigInt((latest?.timestamp ?? Math.floor(Date.now() / 1000)) + 1200)
+  const tx = await pool.swap(amountIn, 0n, true, deadline)
   const receipt = await tx.wait()
+  const settledOut = swapAmountOutFromLogs(pool.interface, deployment.pool, receipt?.logs ?? [])
+  if (settledOut === undefined) throw new Error('Swap event was not found in the live write receipt.')
+
   console.log(
     JSON.stringify(
       {
         liveWriteSubmitted: true,
         txHash: receipt?.hash,
         amountIn: amountIn.toString(),
-        expectedOut: expectedOut.toString(),
+        expectedOutBeforeSubmit: expectedOut.toString(),
+        settledOut: settledOut.toString(),
       },
       null,
       2,
@@ -147,17 +225,18 @@ async function main() {
         liveWrite: true,
         txHash: receipt?.hash,
         amountIn: amountIn.toString(),
-        expectedOut: expectedOut.toString(),
+        expectedOutBeforeSubmit: expectedOut.toString(),
+        settledOut: settledOut.toString(),
         decryptedOut: decrypted.toString(),
-        matched: decrypted === expectedOut,
+        matched: decrypted === settledOut,
       },
       null,
       2,
     ),
   )
 
-  if (decrypted !== expectedOut) {
-    throw new Error(`Decrypted amount ${decrypted} did not match expected amount ${expectedOut}`)
+  if (decrypted !== settledOut) {
+    throw new Error(`Decrypted amount ${decrypted} did not match settled amount ${settledOut}`)
   }
 }
 

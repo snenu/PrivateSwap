@@ -40,6 +40,8 @@ async function main() {
   await (await tokenB.approve(poolAddr, init)).wait()
   await (await pool.initialize(init, init)).wait()
   console.log('Pool initialized with', init.toString(), 'each side')
+  console.log('Initial LP shares:', (await pool.totalLiquidity()).toString())
+  console.log('Swap fee bps:', (await pool.SWAP_FEE_BPS()).toString())
 
   const testMint = 10_000n * tokenUnit
   await (await tokenA.mint(deployer.address, testMint)).wait()
@@ -59,6 +61,9 @@ async function main() {
     initializedLiquidity: init.toString(),
     initializedLiquidityTokens: '1000',
     faucetAmountTokens: '100',
+    swapFeeBps: Number(await pool.SWAP_FEE_BPS()),
+    txDeadlineSeconds: 1200,
+    features: ['swap', 'swapFee', 'deadlineProtection', 'committedSwap', 'liquidityManagement', 'fheReserveMirror'],
   }
   fs.writeFileSync(path.join(outDir, 'sepolia.json'), JSON.stringify(deployment, null, 2))
   console.log('Wrote deployments/sepolia.json')

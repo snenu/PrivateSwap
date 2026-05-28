@@ -8,5 +8,8 @@
   "decimals": 6,
   "initializedLiquidity": "1000000000",
   "initializedLiquidityTokens": "1000",
-  "faucetAmountTokens": "100"
+  "faucetAmountTokens": "100",
+  "swapFeeBps": 30,
+  "txDeadlineSeconds": 1200,
+  "features": ["swap", "swapFee", "deadlineProtection", "committedSwap", "liquidityManagement", "fheReserveMirror"]
 }
