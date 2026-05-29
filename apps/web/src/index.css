@@ -2,6 +2,7 @@
 :root {
   --bg: #101413;
   --bg-soft: #171c1b;
+  --bg-accent: #101918;
   --panel: rgba(248, 250, 248, 0.96);
   --panel-strong: #ffffff;
   --ink: #101715;
@@ -39,7 +40,7 @@ body {
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
     linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(135deg, var(--bg) 0%, var(--bg-soft) 52%, #101918 100%);
+    linear-gradient(135deg, var(--bg) 0%, var(--bg-soft) 52%, var(--bg-accent) 100%);
   background-size: 64px 64px, 64px 64px, auto;
   color: var(--ink);
   font-family: var(--font);
@@ -355,8 +356,12 @@ a:hover {
   padding: 10px 12px;
 }
 
-.metric + .metric {
+.metric:nth-child(even) {
   border-left: 1px solid var(--line-soft);
+}
+
+.metric:nth-child(n + 3) {
+  border-top: 1px solid var(--line-soft);
 }
 
 .metric span {
@@ -666,8 +671,11 @@ input:focus-visible {
     grid-template-columns: 1fr;
   }
 
-  .metric + .metric {
+  .metric:nth-child(even) {
     border-left: 0;
+  }
+
+  .metric:nth-child(n + 2) {
     border-top: 1px solid var(--line-soft);
   }
 
@@ -697,7 +705,8 @@ input:focus-visible {
 
 @media (max-width: 560px) {
   .app-shell {
-    width: min(100% - 16px, 420px);
+    width: calc(100vw - 16px);
+    max-width: 420px;
   }
 
   .brand h1 {
@@ -740,10 +749,19 @@ input:focus-visible {
   }
 
   .token-input__meta,
+  .token-input__row,
   .asset-row {
     align-items: flex-start;
     flex-direction: column;
     gap: 4px;
+  }
+
+  .token-input__row input {
+    width: 100%;
+  }
+
+  .token-badge {
+    align-self: flex-start;
   }
 
   .asset-row strong {

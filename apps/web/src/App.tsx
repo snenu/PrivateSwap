@@ -16,6 +16,7 @@ import {
   decodeEventLog,
   formatUnits,
   keccak256,
+  type GetLogsReturnType,
   type Log,
   parseAbiItem,
   parseAbiParameters,
@@ -52,6 +53,7 @@ type TxPhase =
   | 'error'
 
 type AppMode = 'swap' | 'liquidity'
+type SwapLog = GetLogsReturnType<typeof swapEvent, [typeof swapEvent], true>[number]
 
 type TokenSummary = {
   symbol: string
@@ -655,7 +657,7 @@ export default function App() {
       const latest = await publicClient.getBlockNumber()
       const earliest = latest > SWAP_LOOKBACK_BLOCKS ? latest - SWAP_LOOKBACK_BLOCKS : 0n
       let toBlock = latest
-      const logs: Awaited<ReturnType<typeof publicClient.getLogs>> = []
+      const logs: SwapLog[] = []
 
       while (toBlock >= earliest && logs.length < 8) {
         const fromBlock =
@@ -666,6 +668,7 @@ export default function App() {
           address: poolAddress,
           event: swapEvent,
           fromBlock,
+          strict: true,
           toBlock,
         })
         logs.unshift(...chunk)
