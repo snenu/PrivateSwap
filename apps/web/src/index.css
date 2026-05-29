@@ -550,7 +550,7 @@ input:focus-visible {
 
 .history-row {
   display: grid;
-  grid-template-columns: minmax(88px, 0.9fr) minmax(0, 1fr) minmax(70px, 0.72fr);
+  grid-template-columns: minmax(88px, 0.8fr) minmax(0, 1fr);
   gap: 8px;
   align-items: center;
   min-height: 42px;
@@ -564,13 +564,11 @@ input:focus-visible {
   border-top: 0;
 }
 
-.history-row strong,
-.history-row small {
+.history-row strong {
   overflow-wrap: anywhere;
 }
 
-.history-row small {
-  color: var(--muted);
+.history-row strong {
   text-align: right;
 }
 
@@ -698,7 +696,7 @@ input:focus-visible {
     grid-template-columns: 1fr;
   }
 
-  .history-row small {
+  .history-row strong {
     text-align: left;
   }
 }

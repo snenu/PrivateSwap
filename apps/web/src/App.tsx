@@ -77,7 +77,6 @@ type PoolConfig = {
 type SwapHistoryItem = {
   txHash: `0x${string}`
   blockNumber: bigint
-  user: `0x${string}`
   zeroForOne: boolean
   amountIn: bigint
   amountOut: bigint
@@ -682,7 +681,6 @@ export default function App() {
         .map((log) => ({
           txHash: log.transactionHash,
           blockNumber: log.blockNumber,
-          user: log.args.user ?? ZERO,
           zeroForOne: Boolean(log.args.zeroForOne),
           amountIn: BigInt(log.args.amountIn ?? 0n),
           amountOut: BigInt(log.args.amountOut ?? 0n),
@@ -1514,20 +1512,16 @@ export default function App() {
                   <p className="muted">{historyLoading ? 'Loading...' : historyErr || 'No recent swaps.'}</p>
                 ) : (
                   history.map((item) => (
-                    <a
+                    <div
                       className="history-row"
                       key={`${item.txHash}-${item.blockNumber.toString()}`}
-                      href={`https://sepolia.etherscan.io/tx/${item.txHash}`}
-                      target="_blank"
-                      rel="noreferrer"
                     >
                       <span>{item.zeroForOne ? `${token0.symbol} -> ${token1.symbol}` : `${token1.symbol} -> ${token0.symbol}`}</span>
                       <strong>
                         {formatToken(item.amountIn, item.zeroForOne ? token0.decimals : token1.decimals)} /{' '}
                         {formatToken(item.amountOut, item.zeroForOne ? token1.decimals : token0.decimals)}
                       </strong>
-                      <small>{shortAddress(item.user)}</small>
-                    </a>
+                    </div>
                   ))
                 )}
               </div>
