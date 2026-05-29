@@ -22,7 +22,7 @@ import {
   parseUnits,
 } from 'viem'
 import { sepolia } from 'wagmi/chains'
-import { FheTypes, type CofheClient } from '@cofhe/sdk'
+import type { CofheClient } from '@cofhe/sdk'
 import { erc20Abi, poolAbi } from './contracts'
 import { useCofhe } from './useCofhe'
 import { wagmiConfig } from './wagmi'
@@ -169,6 +169,17 @@ function formatBps(value: number | undefined) {
   return `${(value / 100).toFixed(2)}%`
 }
 
+function formatDuration(seconds: bigint) {
+  const totalSeconds = Number(seconds)
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return 'now'
+
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.ceil((totalSeconds % 3600) / 60)
+  if (hours <= 0) return `${minutes}m`
+  if (minutes === 0 || minutes === 60) return `${hours + (minutes === 60 ? 1 : 0)}h`
+  return `${hours}h ${minutes}m`
+}
+
 function parseTokenAmount(value: string, decimals: number) {
   try {
     if (!value.trim()) return 0n
@@ -183,6 +194,7 @@ async function sleep(ms: number) {
 }
 
 async function decryptUint64WithRetry(client: CofheClient, handle: bigint, attempts = 5) {
+  const { FheTypes } = await import('@cofhe/sdk')
   let lastError: unknown
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -253,7 +265,7 @@ export default function App() {
   const token0Address = selectedPool?.token0 ?? ZERO
   const token1Address = selectedPool?.token1 ?? ZERO
   const configured = !!selectedPool && poolAddress !== ZERO && token0Address !== ZERO && token1Address !== ZERO
-  const faucetEnabled = import.meta.env.VITE_ENABLE_FAUCET !== 'false'
+  const faucetEnabled = import.meta.env.VITE_ENABLE_FAUCET === 'true'
 
   const [mode, setMode] = useState<AppMode>('swap')
   const [amountStr, setAmountStr] = useState('10')
@@ -272,6 +284,7 @@ export default function App() {
   const [history, setHistory] = useState<SwapHistoryItem[]>([])
   const [historyErr, setHistoryErr] = useState<string | null>(null)
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000))
   const { writeContractAsync } = useWriteContract()
 
   const { data: dec0 } = useReadContract({
@@ -349,6 +362,39 @@ export default function App() {
     args: [poolAddress],
     query: { enabled: configured },
   })
+  const { data: pendingCommitmentRaw } = useReadContract({
+    address: poolAddress,
+    abi: poolAbi,
+    functionName: 'swapCommitments',
+    args: address ? [address] : undefined,
+    query: { enabled: configured && !!address },
+  })
+  const { data: faucetCooldown0Raw } = useReadContract({
+    address: token0Address,
+    abi: erc20Abi,
+    functionName: 'faucetCooldown',
+    query: { enabled: configured && faucetEnabled },
+  })
+  const { data: faucetCooldown1Raw } = useReadContract({
+    address: token1Address,
+    abi: erc20Abi,
+    functionName: 'faucetCooldown',
+    query: { enabled: configured && faucetEnabled },
+  })
+  const { data: lastFaucetClaim0Raw } = useReadContract({
+    address: token0Address,
+    abi: erc20Abi,
+    functionName: 'lastFaucetClaim',
+    args: address ? [address] : undefined,
+    query: { enabled: configured && faucetEnabled && !!address },
+  })
+  const { data: lastFaucetClaim1Raw } = useReadContract({
+    address: token1Address,
+    abi: erc20Abi,
+    functionName: 'lastFaucetClaim',
+    args: address ? [address] : undefined,
+    query: { enabled: configured && faucetEnabled && !!address },
+  })
 
   const token0 = useMemo<TokenSummary>(
     () => ({
@@ -410,6 +456,30 @@ export default function App() {
   const allowance = allowanceRaw as bigint | undefined
   const allowance0 = allowance0Raw as bigint | undefined
   const allowance1 = allowance1Raw as bigint | undefined
+  const pendingCommitment = pendingCommitmentRaw as `0x${string}` | undefined
+  const hasPendingCommitment = pendingCommitment !== undefined && pendingCommitment !== ZERO_HASH
+  const faucetCooldown0 = faucetCooldown0Raw as bigint | undefined
+  const faucetCooldown1 = faucetCooldown1Raw as bigint | undefined
+  const lastFaucetClaim0 = lastFaucetClaim0Raw as bigint | undefined
+  const lastFaucetClaim1 = lastFaucetClaim1Raw as bigint | undefined
+  const now = BigInt(nowSec)
+  const nextFaucet0 =
+    faucetCooldown0 !== undefined && lastFaucetClaim0 !== undefined ? lastFaucetClaim0 + faucetCooldown0 : undefined
+  const nextFaucet1 =
+    faucetCooldown1 !== undefined && lastFaucetClaim1 !== undefined ? lastFaucetClaim1 + faucetCooldown1 : undefined
+  const faucetCanClaim0 = faucetEnabled && nextFaucet0 !== undefined && now >= nextFaucet0
+  const faucetCanClaim1 = faucetEnabled && nextFaucet1 !== undefined && now >= nextFaucet1
+  const faucetCanClaimAny = faucetCanClaim0 || faucetCanClaim1
+  const nextFaucetAt =
+    nextFaucet0 === undefined
+      ? nextFaucet1
+      : nextFaucet1 === undefined
+        ? nextFaucet0
+        : nextFaucet0 < nextFaucet1
+          ? nextFaucet0
+          : nextFaucet1
+  const faucetCooldownRemaining =
+    faucetEnabled && !faucetCanClaimAny && nextFaucetAt !== undefined && nextFaucetAt > now ? nextFaucetAt - now : undefined
 
   const balanceTooLow = tokenIn.balance !== undefined && amountIn > tokenIn.balance
   const encryptedMathTooLarge =
@@ -547,6 +617,26 @@ export default function App() {
           ? 'Approve and add'
           : 'Add liquidity'
   const addLiquidityDisabled = !configured || busy || walletPending || (isConnected && !wrongChain && !canAddLiquidity)
+  const removeLiquidityLabel = !isConnected
+    ? 'Connect wallet'
+    : wrongChain
+      ? 'Switch to Sepolia'
+      : busy
+        ? phaseLabels[phase]
+        : 'Remove liquidity'
+  const removeLiquidityDisabled = !configured || busy || walletPending || (isConnected && !wrongChain && !canRemoveLiquidity)
+  const faucetActionLabel = !isConnected
+    ? 'Connect for faucet'
+    : wrongChain
+      ? 'Switch to Sepolia'
+      : busy && phase === 'faucet'
+        ? phaseLabels[phase]
+        : faucetCooldownRemaining !== undefined
+          ? `Faucet in ${formatDuration(faucetCooldownRemaining)}`
+          : 'Claim test tokens'
+  const faucetActionDisabled = !configured || busy || walletPending || (isConnected && !wrongChain && !faucetCanClaimAny)
+  const executionSteps: TxPhase[] =
+    phase === 'faucet' ? ['faucet'] : mode === 'liquidity' ? ['approve0', 'approve1', 'liquidity'] : ['commit', 'approve', 'swap', 'decrypt']
 
   const handleSwitchToSepolia = useCallback(() => {
     switchChain({ chainId: sepolia.id })
@@ -592,6 +682,11 @@ export default function App() {
   useEffect(() => {
     void refreshHistory()
   }, [refreshHistory])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 30_000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   const connectWallet = useCallback(() => {
     const connector = connectors[0]
@@ -653,30 +748,46 @@ export default function App() {
       setErr('Switch to Ethereum Sepolia.')
       return
     }
+    if (!faucetCanClaimAny) {
+      setErr(
+        faucetCooldownRemaining !== undefined
+          ? `Token faucet is cooling down. Try again in ${formatDuration(faucetCooldownRemaining)}.`
+          : 'Token faucet is not ready yet.',
+      )
+      return
+    }
 
     try {
       setPhase('faucet')
-      setStatusMsg(`Claiming ${token0.symbol}...`)
-      const hash0 = await writeContractAsync({
-        address: token0.address,
-        abi: erc20Abi,
-        functionName: 'claimFaucet',
-      })
-      setTxHash(hash0)
-      await waitForTransactionReceipt(wagmiConfig, { hash: hash0 })
+      let claimed = 0
 
-      setStatusMsg(`Claiming ${token1.symbol}...`)
-      const hash1 = await writeContractAsync({
-        address: token1.address,
-        abi: erc20Abi,
-        functionName: 'claimFaucet',
-      })
-      setTxHash(hash1)
-      await waitForTransactionReceipt(wagmiConfig, { hash: hash1 })
+      if (faucetCanClaim0) {
+        setStatusMsg(`Claiming ${token0.symbol}...`)
+        const hash0 = await writeContractAsync({
+          address: token0.address,
+          abi: erc20Abi,
+          functionName: 'claimFaucet',
+        })
+        claimed += 1
+        setTxHash(hash0)
+        await waitForTransactionReceipt(wagmiConfig, { hash: hash0 })
+      }
+
+      if (faucetCanClaim1) {
+        setStatusMsg(`Claiming ${token1.symbol}...`)
+        const hash1 = await writeContractAsync({
+          address: token1.address,
+          abi: erc20Abi,
+          functionName: 'claimFaucet',
+        })
+        claimed += 1
+        setTxHash(hash1)
+        await waitForTransactionReceipt(wagmiConfig, { hash: hash1 })
+      }
 
       await invalidateReads()
       setPhase('done')
-      setStatusMsg('Test tokens claimed.')
+      setStatusMsg(claimed === 2 ? 'Test tokens claimed.' : 'Available test token claimed.')
     } catch (error) {
       setPhase('error')
       setErr(compactError(error))
@@ -686,6 +797,10 @@ export default function App() {
     address,
     chainId,
     configured,
+    faucetCanClaim0,
+    faucetCanClaim1,
+    faucetCanClaimAny,
+    faucetCooldownRemaining,
     faucetEnabled,
     invalidateReads,
     resetResult,
@@ -695,6 +810,37 @@ export default function App() {
     token1.symbol,
     writeContractAsync,
   ])
+
+  const runCancelCommitment = useCallback(async () => {
+    resetResult()
+    if (!configured || !address || !hasPendingCommitment) {
+      setErr('No pending commitment found for this wallet.')
+      return
+    }
+    if (chainId !== sepolia.id) {
+      setErr('Switch to Ethereum Sepolia.')
+      return
+    }
+
+    try {
+      setPhase('commit')
+      setStatusMsg('Cancelling pending commitment...')
+      const hash = await writeContractAsync({
+        address: poolAddress,
+        abi: poolAbi,
+        functionName: 'cancelCommitment',
+      })
+      setTxHash(hash)
+      await waitForTransactionReceipt(wagmiConfig, { hash })
+      await invalidateReads()
+      setPhase('done')
+      setStatusMsg('Pending commitment cancelled.')
+    } catch (error) {
+      setPhase('error')
+      setErr(compactError(error))
+      setStatusMsg('')
+    }
+  }, [address, chainId, configured, hasPendingCommitment, invalidateReads, poolAddress, resetResult, writeContractAsync])
 
   const runSwap = useCallback(async () => {
     resetResult()
@@ -724,8 +870,6 @@ export default function App() {
     }
 
     try {
-      const deadline = deadlineFromNow()
-
       if (needsApprove) {
         setPhase('approve')
         setStatusMsg(`Approving ${tokenIn.symbol}...`)
@@ -739,6 +883,7 @@ export default function App() {
         await waitForTransactionReceipt(wagmiConfig, { hash: approveHash })
       }
 
+      const deadline = deadlineFromNow()
       let salt = ZERO_HASH
       if (useCommitment) {
         salt = randomBytes32()
@@ -1112,7 +1257,20 @@ export default function App() {
                     />
                     <span>Pre-commit intent</span>
                   </label>
+                  {hasPendingCommitment && (
+                    <button
+                      type="button"
+                      className="text-button"
+                      disabled={busy || wrongChain}
+                      onClick={() => void runCancelCommitment()}
+                    >
+                      Cancel pending
+                    </button>
+                  )}
                 </div>
+                {hasPendingCommitment && (
+                  <p className="form-hint muted">A pending committed intent is stored for this wallet.</p>
+                )}
 
                 <button
                   type="button"
@@ -1230,10 +1388,14 @@ export default function App() {
                   <button
                     type="button"
                     className="btn btn-secondary full-width"
-                    disabled={!canRemoveLiquidity}
-                    onClick={() => void runRemoveLiquidity()}
+                    disabled={removeLiquidityDisabled}
+                    onClick={() => {
+                      if (!isConnected) connectWallet()
+                      else if (wrongChain) handleSwitchToSepolia()
+                      else void runRemoveLiquidity()
+                    }}
                   >
-                    Remove liquidity
+                    {removeLiquidityLabel}
                   </button>
                 </div>
 
@@ -1273,10 +1435,14 @@ export default function App() {
                     <button
                       type="button"
                       className="btn btn-secondary"
-                      disabled={!configured || !isConnected || wrongChain || busy}
-                      onClick={() => void runFaucet()}
+                      disabled={faucetActionDisabled}
+                      onClick={() => {
+                        if (!isConnected) connectWallet()
+                        else if (wrongChain) handleSwitchToSepolia()
+                        else void runFaucet()
+                      }}
                     >
-                      Claim test tokens
+                      {faucetActionLabel}
                     </button>
                   )}
                 </div>
@@ -1287,6 +1453,9 @@ export default function App() {
                 <span>LP</span>
                 <strong>{formatToken(lpBalance, 6)}</strong>
               </div>
+              {faucetEnabled && isConnected && !wrongChain && faucetCooldownRemaining !== undefined && (
+                <p className="form-hint muted">Next faucet claim in {formatDuration(faucetCooldownRemaining)}.</p>
+              )}
             </section>
 
             <section className="panel">
@@ -1364,7 +1533,7 @@ export default function App() {
           <div className="status-card status-card--wide">
             <p className="eyebrow">Execution</p>
             <div className="phase-track">
-              {(['commit', 'approve', 'swap', 'decrypt'] as TxPhase[]).map((step) => (
+              {executionSteps.map((step) => (
                 <span key={step} className={phase === step ? 'phase-pill phase-pill--active' : 'phase-pill'}>
                   {phaseLabels[step]}
                 </span>

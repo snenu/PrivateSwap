@@ -14,7 +14,7 @@ VITE_SEPOLIA_RPC_URL=https://ethereum-sepolia.publicnode.com
 VITE_ENABLE_FAUCET=true
 ```
 
-The three contract addresses should match `packages/contracts/deployments/sepolia.json`. Set `VITE_ENABLE_FAUCET=false` when the deployment should not expose the test-token faucet button.
+The three contract addresses should match `packages/contracts/deployments/sepolia.json`. Set `VITE_ENABLE_FAUCET=true` only when the deployment should expose the test-token faucet button; omitted or `false` hides it.
 
 ## Production preview
 

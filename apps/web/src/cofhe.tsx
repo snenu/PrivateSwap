@@ -6,8 +6,6 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { createCofheClient, createCofheConfig } from '@cofhe/sdk/web'
-import { chains } from '@cofhe/sdk/chains'
 import type { CofheClient } from '@cofhe/sdk'
 import { useAccount, useChainId, usePublicClient, useWalletClient } from 'wagmi'
 import { sepolia } from 'wagmi/chains'
@@ -29,14 +27,6 @@ export function CofheProvider({ children }: { children: ReactNode }) {
     isConnected && address && chainId === sepolia.id ? `${chainId}:${address.toLowerCase()}` : 'disconnected'
   const latestSessionKey = useRef(sessionKey)
   latestSessionKey.current = sessionKey
-
-  const config = useMemo(
-    () =>
-      createCofheConfig({
-        supportedChains: [chains.sepolia],
-      }),
-    [],
-  )
 
   const disconnectActiveClient = useCallback(() => {
     try {
@@ -69,6 +59,13 @@ export function CofheProvider({ children }: { children: ReactNode }) {
     }
 
     setConnecting(true)
+    const [{ createCofheClient, createCofheConfig }, { chains }] = await Promise.all([
+      import('@cofhe/sdk/web'),
+      import('@cofhe/sdk/chains'),
+    ])
+    const config = createCofheConfig({
+      supportedChains: [chains.sepolia],
+    })
     const nextClient = createCofheClient(config)
 
     try {
@@ -106,7 +103,7 @@ export function CofheProvider({ children }: { children: ReactNode }) {
         setConnecting(false)
       }
     }
-  }, [address, chainId, config, disconnectActiveClient, isConnected, publicClient, sessionKey, walletClient])
+  }, [address, chainId, disconnectActiveClient, isConnected, publicClient, sessionKey, walletClient])
 
   useEffect(() => {
     void connect()

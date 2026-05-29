@@ -23,6 +23,7 @@
 - Swaps settle ERC20 transfers and decrypt the FHE amount-out mirror.
 - Committed swaps reject missing or mismatched commitments and clear valid commitments after reveal.
 - Public quotes reject inputs that would overflow the live encrypted `euint64` mirror path.
+- Swap execution rejects trades that round down to zero output.
 - Add/remove liquidity updates plaintext reserves, LP shares, and encrypted reserves.
 - Encrypted swap outputs remain wallet scoped.
 - The web CoFHE client discards stale wallet/network sessions before exposing decrypt readiness.

@@ -64,6 +64,7 @@ contract PrivateSwapPool is ReentrancyGuard {
     error AlreadyInitialized();
     error NotInitialized();
     error ZeroAmount();
+    error ZeroOutput();
     error Slippage();
     error AmountTooLarge();
     error EncryptedMathOverflow();
@@ -225,6 +226,7 @@ contract PrivateSwapPool is ReentrancyGuard {
 
         amountOut = _executableAmountOut(amountIn, zeroForOne);
         uint256 effectiveAmountIn = _amountInAfterFee(amountIn);
+        if (amountOut == 0) revert ZeroOutput();
         if (amountOut < minAmountOut) revert Slippage();
 
         tokenIn.safeTransferFrom(user, address(this), amountIn);
@@ -327,7 +329,6 @@ contract PrivateSwapPool is ReentrancyGuard {
 
     function _allowEnc(euint64 v) internal {
         FHE.allowThis(v);
-        FHE.allowSender(v);
     }
 
     function _allowEncFor(euint64 v, address account) internal {

@@ -49,15 +49,15 @@ Contracts are deployed to **Ethereum Sepolia**. Addresses are stored in [`packag
 
 | | Address |
 |---|---------|
-| **PrivateSwapPool** | `0x8d86FA08eE472389773ad5dE3423f5A8841Dd49d` |
-| **PSA (token0)** | `0x5698e701ea238aA1Ba76385f440B4B871221Dc5a` |
-| **PSB (token1)** | `0x2794e2F6616994657869a474670a58A07B9095db` |
+| **PrivateSwapPool** | `0xB94437725b64a614b574d626022307a1AFF5608b` |
+| **PSA (token0)** | `0xaa55B3eedaa0d947D24a1736530287639469A0C5` |
+| **PSB (token1)** | `0x04519E636b0B0Eb0822307a2E15F0fCD434e4d6A` |
 | **Swap fee** | `30` bps (0.30%) |
 | **Transaction deadline** | `1200` seconds |
 
 The current Sepolia deployment includes the Wave 5 pool entrypoints for committed swaps, commitment cancellation, LP accounting, add/remove liquidity, a 30 bps LP fee, transaction deadline protection, indexed swap history, and the encrypted CoFHE reserve mirror.
 
-Copy `pool`, `token0`, and `token1` into `apps/web/.env` as `VITE_POOL_ADDRESS`, `VITE_TOKEN0_ADDRESS`, and `VITE_TOKEN1_ADDRESS`. Optionally set `VITE_SEPOLIA_RPC_URL` to your RPC (Alchemy, Infura, etc.). Keep `VITE_ENABLE_FAUCET=true` for judged demos so users can claim PSA/PSB; set it to `false` only when you intentionally want to hide test-token actions.
+Copy `pool`, `token0`, and `token1` into `apps/web/.env` as `VITE_POOL_ADDRESS`, `VITE_TOKEN0_ADDRESS`, and `VITE_TOKEN1_ADDRESS`. Optionally set `VITE_SEPOLIA_RPC_URL` to your RPC (Alchemy, Infura, etc.). Set `VITE_ENABLE_FAUCET=true` for judged demos so users can claim PSA/PSB; leave it unset or set it to `false` when you intentionally want to hide test-token actions.
 
 For multiple deployed pools, set `VITE_POOLS_JSON` instead of the single-pool variables:
 
@@ -122,7 +122,7 @@ The repository includes both a root `vercel.json` for monorepo deployments and `
 - `VITE_TOKEN0_ADDRESS`
 - `VITE_TOKEN1_ADDRESS`
 - `VITE_SEPOLIA_RPC_URL`
-- `VITE_ENABLE_FAUCET=true` for hackathon judging and demos, or `false` for a cleaner production-facing preview
+- `VITE_ENABLE_FAUCET=true` for hackathon judging and demos, or omit/set `false` for a cleaner production-facing preview
 
 After changing any address, redeploy the web app so the hosted preview is not pointing at stale contracts.
 
@@ -192,7 +192,7 @@ Delivered:
 - Vercel production environment variables for the current Sepolia deployment.
 - Production deployment at https://private-swap-ochre.vercel.app.
 - Browser verification of the deployed app: current pool address, live quote, faucet controls, balances/liquidity panels, and no console errors.
-- App-local lockfile and clean app-local production audit path.
+- App-local lockfile retained for the existing Vercel project root; dependency audit caveats are documented below.
 
 ### Wave 5 — Done: Production Hardening And Operational UX
 
@@ -208,6 +208,10 @@ Delivered:
 - Production monitor script for bytecode, reserves, quotes, accounting, and recent indexed activity.
 - Frontend CoFHE session handling hardened against wallet/network switches while a permit setup is still in flight.
 - Public quote API now enforces the same live encrypted math bounds as swap execution, so integrations cannot receive an executable-looking quote for a swap that the FHE mirror will reject.
+- Swap execution now rejects dust trades that round down to zero output, so direct contract callers cannot accidentally donate input tokens for no return.
+- Frontend users can cancel stale committed swap intents, see faucet cooldown state, and get mode-specific execution steps for swaps, liquidity, and faucet claims.
+- CoFHE SDK code is lazy-loaded after a wallet session needs it, reducing the initial app bundle.
+- GitHub Actions CI verifies compile, contract tests, frontend lint, and frontend build on pushes and pull requests.
 - Live write smoke checks compare decrypted CoFHE output against the mined `Swap` event output, avoiding stale pre-submit quote false failures.
 - Expanded Hardhat mock tests for committed swaps, LP reserve synchronization, and encrypted math quote bounds.
 

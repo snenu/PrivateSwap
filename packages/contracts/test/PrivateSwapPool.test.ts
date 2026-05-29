@@ -248,6 +248,18 @@ describe('PrivateSwapPool', function () {
     expect(expectedOut).to.be.lt((amountIn * reserve) / (reserve + amountIn))
   })
 
+  it('rejects swaps that round down to zero output', async function () {
+    const { pool, tokenA, alice } = await loadFixture(deployFixture)
+
+    const amountIn = 1n
+    await tokenA.connect(alice).approve(await pool.getAddress(), amountIn)
+
+    await expect(pool.connect(alice).swap(amountIn, 0n, true, await futureDeadline())).to.be.revertedWithCustomError(
+      pool,
+      'ZeroOutput',
+    )
+  })
+
   it('rejects expired swaps and liquidity operations', async function () {
     const { pool, tokenA, tokenB, alice } = await loadFixture(deployFixture)
 
