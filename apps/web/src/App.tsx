@@ -32,7 +32,8 @@ import heroMark from './assets/hero.png'
 const ZERO = '0x0000000000000000000000000000000000000000' as const
 const ZERO_HASH = `0x${'0'.repeat(64)}` as `0x${string}`
 const UINT64_MAX = (1n << 64n) - 1n
-const SWAP_LOOKBACK_BLOCKS = 50_000n
+const SWAP_LOOKBACK_BLOCKS = 8_000n
+const SWAP_LOG_CHUNK_BLOCKS = 2_000n
 const TX_DEADLINE_SECONDS = 20 * 60
 const swapEvent = parseAbiItem('event Swap(address indexed user, bool zeroForOne, uint256 amountIn, uint256 amountOut)')
 const commitmentParams = parseAbiParameters('address,uint256,uint256,bool,bytes32,address,uint256,uint256')
@@ -652,13 +653,25 @@ export default function App() {
     setHistoryErr(null)
     try {
       const latest = await publicClient.getBlockNumber()
-      const fromBlock = latest > SWAP_LOOKBACK_BLOCKS ? latest - SWAP_LOOKBACK_BLOCKS : 0n
-      const logs = await publicClient.getLogs({
-        address: poolAddress,
-        event: swapEvent,
-        fromBlock,
-        toBlock: 'latest',
-      })
+      const earliest = latest > SWAP_LOOKBACK_BLOCKS ? latest - SWAP_LOOKBACK_BLOCKS : 0n
+      let toBlock = latest
+      const logs: Awaited<ReturnType<typeof publicClient.getLogs>> = []
+
+      while (toBlock >= earliest && logs.length < 8) {
+        const fromBlock =
+          toBlock > SWAP_LOG_CHUNK_BLOCKS && toBlock - SWAP_LOG_CHUNK_BLOCKS + 1n > earliest
+            ? toBlock - SWAP_LOG_CHUNK_BLOCKS + 1n
+            : earliest
+        const chunk = await publicClient.getLogs({
+          address: poolAddress,
+          event: swapEvent,
+          fromBlock,
+          toBlock,
+        })
+        logs.unshift(...chunk)
+        if (fromBlock === earliest || fromBlock === 0n) break
+        toBlock = fromBlock - 1n
+      }
 
       const rows = logs
         .slice(-8)
@@ -673,7 +686,8 @@ export default function App() {
         }))
       setHistory(rows)
     } catch (error) {
-      setHistoryErr(compactError(error))
+      setHistory([])
+      setHistoryErr('Recent activity is temporarily unavailable from the public RPC. Refresh again in a moment.')
     } finally {
       setHistoryLoading(false)
     }
