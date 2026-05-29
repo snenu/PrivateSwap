@@ -685,7 +685,7 @@ export default function App() {
           amountOut: BigInt(log.args.amountOut ?? 0n),
         }))
       setHistory(rows)
-    } catch (error) {
+    } catch {
       setHistory([])
       setHistoryErr('Recent activity is temporarily unavailable from the public RPC. Refresh again in a moment.')
     } finally {

@@ -1,11 +1,13 @@
+/* Hallmark - genre: modern-minimal - macrostructure: workbench - designed-as-app */
 :root {
-  --bg: #111314;
-  --bg-soft: #171a1c;
-  --panel: #f7f4ec;
+  --bg: #101413;
+  --bg-soft: #171c1b;
+  --panel: rgba(248, 250, 248, 0.96);
   --panel-strong: #ffffff;
-  --ink: #151718;
-  --muted: #687176;
-  --line: #d8d2c5;
+  --ink: #101715;
+  --muted: #61706d;
+  --line: #d8e1de;
+  --line-soft: rgba(16, 23, 21, 0.08);
   --line-dark: rgba(255, 255, 255, 0.12);
   --teal: #0f766e;
   --teal-strong: #0b5f59;
@@ -26,17 +28,19 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: clip;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(135deg, #101213 0%, #171918 50%, #111517 100%);
-  background-size: 48px 48px, 48px 48px, auto;
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(135deg, var(--bg) 0%, var(--bg-soft) 52%, #101918 100%);
+  background-size: 64px 64px, 64px 64px, auto;
   color: var(--ink);
   font-family: var(--font);
   line-height: 1.5;
@@ -78,10 +82,10 @@ a:hover {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(90deg, rgba(20, 184, 166, 0.08) 1px, transparent 1px),
-    linear-gradient(rgba(245, 158, 11, 0.06) 1px, transparent 1px);
-  background-size: 96px 96px;
-  opacity: 0.45;
+    linear-gradient(90deg, rgba(20, 184, 166, 0.04) 1px, transparent 1px),
+    linear-gradient(rgba(245, 158, 11, 0.035) 1px, transparent 1px);
+  background-size: 128px 128px;
+  opacity: 0.36;
 }
 
 .animated-bg__scanline {
@@ -112,9 +116,9 @@ a:hover {
 .app-shell {
   position: relative;
   z-index: 1;
-  width: min(1180px, calc(100% - 32px));
+  width: min(1100px, calc(100% - 24px));
   margin: 0 auto;
-  padding: 24px 0 28px;
+  padding: 18px 0 24px;
 }
 
 .topbar {
@@ -208,14 +212,14 @@ a:hover {
 
 .main-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.12fr) minmax(280px, 0.78fr);
+  gap: 12px;
   align-items: start;
 }
 
 .side-stack {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .panel,
@@ -224,11 +228,12 @@ a:hover {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--panel);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
+  box-shadow: none;
 }
 
 .panel {
-  padding: 18px;
+  min-width: 0;
+  padding: 16px;
 }
 
 .panel-heading {
@@ -236,7 +241,8 @@ a:hover {
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
 }
 
 .panel-actions {
@@ -260,7 +266,7 @@ a:hover {
 }
 
 .swap-panel {
-  min-height: 620px;
+  min-height: 0;
 }
 
 .mode-tabs {
@@ -282,8 +288,8 @@ a:hover {
 .token-input {
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--panel-strong);
-  padding: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 12px;
 }
 
 .token-input--compact {
@@ -314,7 +320,7 @@ a:hover {
   background: transparent;
   color: var(--ink);
   font-family: var(--mono);
-  font-size: 2rem;
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
 }
 
 .token-input--compact .token-input__row input {
@@ -329,9 +335,11 @@ a:hover {
 .quote-box,
 .result-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
   margin: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
 .result-grid {
@@ -341,10 +349,14 @@ a:hover {
 
 .metric {
   min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel-strong);
-  padding: 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 10px 12px;
+}
+
+.metric + .metric {
+  border-left: 1px solid var(--line-soft);
 }
 
 .metric span {
@@ -440,6 +452,16 @@ a:hover {
   transition: transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
 }
 
+.btn:focus-visible,
+.icon-button:focus-visible,
+.text-button:focus-visible,
+.segmented:focus-visible,
+.route-select:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
 .btn:disabled,
 .icon-button:disabled,
 .text-button:disabled,
@@ -498,7 +520,7 @@ a:hover {
 
 .asset-row {
   justify-content: space-between;
-  min-height: 48px;
+  min-height: 44px;
   border-top: 1px solid var(--line);
   font-family: var(--mono);
 }
@@ -523,7 +545,7 @@ a:hover {
 
 .history-row {
   display: grid;
-  grid-template-columns: minmax(92px, 0.8fr) minmax(0, 1.2fr) minmax(74px, 0.6fr);
+  grid-template-columns: minmax(88px, 0.9fr) minmax(0, 1fr) minmax(70px, 0.72fr);
   gap: 8px;
   align-items: center;
   min-height: 42px;
@@ -549,14 +571,15 @@ a:hover {
 
 .status-panel {
   display: grid;
-  grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.4fr) minmax(180px, 0.7fr);
-  gap: 16px;
-  margin-top: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
 }
 
 .status-card {
   padding: 14px;
-  min-height: 98px;
+  min-width: 0;
+  min-height: 92px;
 }
 
 .status-card h3 {
@@ -571,7 +594,7 @@ a:hover {
 
 .phase-pill {
   color: var(--muted);
-  background: #ece7dc;
+  background: rgba(16, 23, 21, 0.06);
 }
 
 .phase-pill--active {
@@ -580,7 +603,7 @@ a:hover {
 }
 
 .notice {
-  margin: 16px 0;
+  margin: 14px 0;
   padding: 14px;
   color: var(--ink);
 }
@@ -620,9 +643,9 @@ a:hover {
   font-size: 0.9rem;
 }
 
-@media (max-width: 920px) {
+@media (max-width: 1080px) {
   .app-shell {
-    width: min(100% - 20px, 680px);
+    width: min(100% - 20px, 720px);
     padding-top: 14px;
   }
 
@@ -641,6 +664,11 @@ a:hover {
   .result-grid,
   .liquidity-grid {
     grid-template-columns: 1fr;
+  }
+
+  .metric + .metric {
+    border-left: 0;
+    border-top: 1px solid var(--line-soft);
   }
 
   .panel-actions,
@@ -663,6 +691,62 @@ a:hover {
   }
 
   .history-row small {
+    text-align: left;
+  }
+}
+
+@media (max-width: 560px) {
+  .app-shell {
+    width: min(100% - 16px, 420px);
+  }
+
+  .brand h1 {
+    font-size: 1.55rem;
+  }
+
+  .brand-mark {
+    width: 42px;
+    height: 42px;
+  }
+
+  .wallet-bar,
+  .mode-tabs,
+  .control-row,
+  .slippage-row,
+  .panel-actions,
+  .wallet-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .wallet-bar,
+  .wallet-bar .btn,
+  .mode-tabs .segmented,
+  .panel-actions .btn,
+  .wallet-actions .btn,
+  .network-pill,
+  .address-chip {
+    width: 100%;
+  }
+
+  .liquidity-grid {
+    gap: 10px;
+  }
+
+  .panel,
+  .notice,
+  .status-card {
+    padding: 14px;
+  }
+
+  .token-input__meta,
+  .asset-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .asset-row strong {
     text-align: left;
   }
 }
